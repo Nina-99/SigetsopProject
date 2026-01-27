@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Control Prenatal</title>
+    <style>
+        @page { size: portrait; margin: 1cm; }
+        body { font-family: Arial, sans-serif; font-size: 9px; }
+        h1 { text-align: center; font-size: 16px; margin-bottom: 8px; }
+        .header { text-align: center; font-size: 10px; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; font-size: 8px; }
+        th, td { border: 1px solid #000; padding: 3px 4px; text-align: left; }
+        th { background-color: #f0f0f0; font-weight: bold; }
+        .footer { margin-top: 15px; font-size: 7px; text-align: right; }
+        .text-center { text-align: center; }
+    </style>
+</head>
+<body>
+    <h1>REPORTE DE CONTROL PRENATAL</h1>
+    <div class="header">
+        <p>Fecha: {{ date }} | Hora: {{ time }}</p>
+        <p>Total de Registros: {{ total }}</p>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>N°</th>
+                <th>Tipo Relación</th>
+                <th>Grado</th>
+                <th>Nombres</th>
+                <th>Apellidos</th>
+                <th>C.I.</th>
+                <th>Pareja Civil</th>
+                <th>Fecha Parto</th>
+                <th>Sem. Gest.</th>
+                <th>Factor RH</th>
+                <th>Lugar Control</th>
+                <th>Observaciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in queryset %}
+            <tr>
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td>{% if record.relationship_type == "officer" %}Funcionario{% else %}Pareja Civil{% endif %}</td>
+                <td>{{ record.personnel.grade.grade_abbr|default:"" }}</td>
+                <td>{{ record.personnel.first_name|default:"" }} {{ record.personnel.middle_name|default:"" }}</td>
+                <td>{{ record.personnel.last_name|default:"" }} {{ record.personnel.maternal_name|default:"" }}</td>
+                <td>{{ record.personnel.identity_card|default:"" }}</td>
+                <td>{{ record.civil_partner_name|default:"" }}</td>
+                <td class="text-center">{{ record.estimated_delivery_date|default:"" }}</td>
+                <td class="text-center">{{ record.current_gestation_week|default:"" }}</td>
+                <td class="text-center">{{ record.rh_factor|default:"" }}</td>
+                <td>{{ record.control_location|default:"" }}</td>
+                <td>{{ record.observations|default:"" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="footer">
+        <p>Generado por Sigetsop - Sistema de Gestión de Personal Policial</p>
+    </div>
+</body>
+</html>

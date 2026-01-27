@@ -1,0 +1,9 @@
+node_modules
+dist
+.env
+.vscode
+.git
+.gitignore
+README.md
+bun.lock
+bun.lockb

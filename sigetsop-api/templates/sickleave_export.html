@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Bajas Médicas</title>
+    <style>
+        @page { size: landscape; margin: 1cm; }
+        body { font-family: Arial, sans-serif; font-size: 8px; }
+        h1 { text-align: center; font-size: 14px; margin-bottom: 8px; }
+        .header { text-align: center; font-size: 9px; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; font-size: 7px; }
+        th, td { border: 1px solid #000; padding: 2px 3px; text-align: left; }
+        th { background-color: #f0f0f0; font-weight: bold; }
+        .footer { margin-top: 15px; font-size: 7px; text-align: right; }
+    </style>
+</head>
+<body>
+    <h1>{{ title }}</h1>
+    <div class="header">
+        <p>Fecha: {{ date }} | Hora: {{ time }}</p>
+        <p>Estado: {{ filter_status }}</p>
+        <p>Total de Registros: {{ total }}</p>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>N°</th>
+                <th>Grado</th>
+                <th>Apellidos</th>
+                <th>Nombres</th>
+                <th>C.I.</th>
+                <th>Clasificación</th>
+                <th>Fecha Inicio</th>
+                <th>Fecha Fin</th>
+                <th>Días</th>
+                <th>Hospital</th>
+                <th>Traído Por</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sick in queryset %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ sick.personnel.grade.grade_abbr|default:"" }}</td>
+                <td>{{ sick.personnel.last_name|default:"" }} {{ sick.personnel.maternal_name|default:"" }}</td>
+                <td>{{ sick.personnel.first_name|default:"" }}</td>
+                <td>{{ sick.personnel.identity_card|default:"" }}</td>
+                <td>{{ sick.classification|default:"" }}</td>
+                <td>{{ sick.start_date|default:"" }}</td>
+                <td>{{ sick.end_date|default:"" }}</td>
+                <td>
+                    {% if sick.start_date and sick.end_date %}
+                        {% with days=sick.end_date|timesince:sick.start_date %}
+                            {% if "day" in days %}
+                                {{ days|slice:":2" }}
+                            {% else %}
+                                0
+                            {% endif %}
+                        {% endwith %}
+                    {% endif %}
+                </td>
+                <td>{{ sick.hospital.name|default:"" }}</td>
+                <td>{{ sick.brought_by|default:"" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="footer">
+        <p>Generado por Sigetsop - Sistema de Gestión de Personal Policial</p>
+    </div>
+</body>
+</html>

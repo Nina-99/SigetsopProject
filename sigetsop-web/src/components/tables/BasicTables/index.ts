@@ -1,0 +1,10 @@
+export { default as AVC09Table } from "./AVC09Table";
+export { default as DataTable } from "./DataTable";
+export { default as FilePersonnelTable } from "./FilePersonnelTable";
+export { default as HospitalTable } from "./HospitalTable";
+export { default as PersonnelTable } from "./PersonnelTable";
+export { default as PrenatalRecordsTable } from "./PrenatalRecordsTable";
+export { default as NatalDataTable } from "./NatalDataTable";
+export { default as SickLeaveTable } from "./SickLeaveTable";
+export { default as UnitsTable } from "./UnitsTable";
+export { default as UsersTable } from "./UsersTable";

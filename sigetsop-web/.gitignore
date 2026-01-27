@@ -1,0 +1,32 @@
+# 💡 Dependencias y Entorno
+# Directorio de módulos de Node (contiene todas las librerías)
+node_modules/
+
+# 📦 Salida de Compilación de Vite
+# Directorio donde Vite o el bundler coloca los archivos listos para producción
+dist/
+out/
+build/
+
+# 🔒 Archivos de Configuración Local y Secretos
+# Archivo de variables de entorno (NUNCA debe ser subido)
+.env
+.env.local
+.env.*.local
+
+# 🖼️ Archivos de Registro y Caché
+# Caché de Vite/Herramientas
+.vite/
+.eslintcache
+
+# 📜 Archivos de Bloqueo de Paquetes
+# Ignora el archivo de bloqueo específico de Bun (si no quieres rastrearlo)
+# Deja 'package-lock.json' si usas NPM o 'yarn.lock' si usas Yarn.
+# Como tienes 'bun.lock', puedes ignorarlo si prefieres que se regenere
+bun.lock
+
+# 🖼️ Archivos de Muestra / Prueba
+# Ignora archivos de imagen grandes, temporales o de prueba
+banner.png# Logs
+AGENTS.md
+skills.json

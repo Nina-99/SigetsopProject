@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de AVC09</title>
+    <style>
+        @page { size: landscape; margin: 1cm; }
+        body { font-family: Arial, sans-serif; font-size: 8px; }
+        h1 { text-align: center; font-size: 14px; margin-bottom: 8px; }
+        .header { text-align: center; font-size: 9px; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; font-size: 7px; }
+        th, td { border: 1px solid #000; padding: 2px 3px; text-align: left; }
+        th { background-color: #f0f0f0; font-weight: bold; }
+        .footer { margin-top: 15px; font-size: 7px; text-align: right; }
+        .state-badge { padding: 1px 4px; border-radius: 3px; font-size: 6px; }
+    </style>
+</head>
+<body>
+    <h1>REPORTE DE AVC09</h1>
+    <div class="header">
+        <p>Fecha: {{ date }} | Hora: {{ time }}</p>
+        <p>Estado: {{ filter_status }}</p>
+        <p>Total de Registros: {{ queryset.count }}</p>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>N°</th>
+                <th>Grado</th>
+                <th>Nombres</th>
+                <th>Apellidos</th>
+                <th>C.I.</th>
+                <th>Nº Aseg.</th>
+                <th>Tipo Riesgo</th>
+                <th>Desde</th>
+                <th>Hasta</th>
+                <th>Días</th>
+                <th>Hospital</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for avc in queryset %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ avc.personnel.grade.grade_abbr|default:"" }}</td>
+                <td>{{ avc.personnel.first_name|default:"" }} {{ avc.personnel.middle_name|default:"" }}</td>
+                <td>{{ avc.personnel.last_name|default:"" }} {{ avc.personnel.maternal_name|default:"" }}</td>
+                <td>{{ avc.personnel.identity_card|default:"" }}</td>
+                <td>{{ avc.insured_number|default:"" }}</td>
+                <td>{{ avc.type_risk|default:"" }}</td>
+                <td>{{ avc.from_date|default:"" }}</td>
+                <td>{{ avc.to_date|default:"" }}</td>
+                <td>{{ avc.days_incapacity|default:"" }}</td>
+                <td>{{ avc.hospital.name|default:"" }}</td>
+                <td>{{ avc.state|default:"" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="footer">
+        <p>Generado por Sigetsop - Sistema de Gestión de Personal Policial</p>
+    </div>
+</body>
+</html>

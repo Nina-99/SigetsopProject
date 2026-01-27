@@ -1,0 +1,15 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ],
+ "compilerOptions": {
+    "types": ["./src/types/opencv.d.ts", "node"],
+        "moduleResolution": "bundler",
+    "module": "esnext", 
+    "target": "es2022",
+    "strict": true,
+    "skipLibCheck": true
+  }
+}

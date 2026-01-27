@@ -1,0 +1,35 @@
+# --- Global ---
+AGENTS.md
+.env
+.env.*
+*.log
+DELETED_BY_DOCKER/
+.DS_Store
+Thumbs.db
+
+# --- Backend (sigetsop-api) ---
+sigetsop-api/AGENTS.md
+sigetsop-api/skills.json
+sigetsop-api/venv/
+sigetsop-api/env/
+sigetsop-api/__pycache__/
+sigetsop-api/*.pyc
+sigetsop-api/media/
+sigetsop-api/static/
+sigetsop-api/temp_uploads/
+sigetsop-api/db.sqlite3
+sigetsop-api/postgres_data/
+sigetsop-api/backup.sql
+sigetsop_police.sql
+
+# --- Frontend (sigetsop-web) ---
+sigetsop-web/AGENTS.md
+sigetsop-web/skills.json
+sigetsop-web/node_modules/
+sigetsop-web/dist/
+sigetsop-web/build/
+sigetsop-web/.vite/
+sigetsop-web/.eslintcache
+
+# --- Docker ---
+.dockerdata/

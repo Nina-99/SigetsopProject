@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Natalidad y Lactancia</title>
+    <style>
+        @page { size: landscape; margin: 1cm; }
+        body { font-family: Arial, sans-serif; font-size: 8px; }
+        h1 { text-align: center; font-size: 16px; margin-bottom: 8px; }
+        .header { text-align: center; font-size: 9px; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; font-size: 7px; }
+        th, td { border: 1px solid #000; padding: 2px 3px; text-align: left; }
+        th { background-color: #f0f0f0; font-weight: bold; }
+        .footer { margin-top: 15px; font-size: 7px; text-align: right; }
+        .text-center { text-align: center; }
+    </style>
+</head>
+<body>
+    <h1>REPORTE DE NATALIDAD Y LACTANCIA</h1>
+    <div class="header">
+        <p>Fecha: {{ date }} | Hora: {{ time }}</p>
+        <p>Total de Registros: {{ total }}</p>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>N°</th>
+                <th>Tipo Relación</th>
+                <th>Grado</th>
+                <th>Nombres</th>
+                <th>Apellidos</th>
+                <th>C.I.</th>
+                <th>Pareja Civil</th>
+                <th>F. Nacimiento</th>
+                <th>País</th>
+                <th>Departamento</th>
+                <th>Provincia</th>
+                <th>Localidad</th>
+                <th>Nacionalidad</th>
+                <th>Observaciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in queryset %}
+            <tr>
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td>{% if record.relationship_type == "officer" %}Funcionario{% else %}Pareja Civil{% endif %}</td>
+                <td>
+                    {% if record.relationship_type == "officer" and record.personnel %}
+                        {{ record.personnel.grade.grade_abbr|default:"" }}
+                    {% endif %}
+                </td>
+                <td>
+                    {% if record.relationship_type == "officer" and record.personnel %}
+                        {{ record.personnel.first_name|default:"" }} {{ record.personnel.middle_name|default:"" }}
+                    {% elif record.civil_partner %}
+                        {{ record.civil_partner.first_name|default:"" }}
+                    {% endif %}
+                </td>
+                <td>
+                    {% if record.relationship_type == "officer" and record.personnel %}
+                        {{ record.personnel.last_name|default:"" }} {{ record.personnel.maternal_name|default:"" }}
+                    {% elif record.civil_partner %}
+                        {{ record.civil_partner.last_name|default:"" }} {{ record.civil_partner.maternal_name|default:"" }}
+                    {% endif %}
+                </td>
+                <td>
+                    {% if record.relationship_type == "officer" and record.personnel %}
+                        {{ record.personnel.identity_card|default:"" }}
+                    {% elif record.civil_partner %}
+                        {{ record.civil_partner.identity_card|default:"" }}
+                    {% endif %}
+                </td>
+                <td>{{ record.civil_partner_name|default:"" }}</td>
+                <td class="text-center">{{ record.birthdate|default:"" }}</td>
+                <td>{{ record.country|default:"" }}</td>
+                <td>{{ record.department|default:"" }}</td>
+                <td>{{ record.province|default:"" }}</td>
+                <td>{{ record.locality|default:"" }}</td>
+                <td>{{ record.nationality|default:"" }}</td>
+                <td>{{ record.observations|default:"" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="footer">
+        <p>Generado por Sigetsop - Sistema de Gestión de Personal Policial</p>
+    </div>
+</body>
+</html>

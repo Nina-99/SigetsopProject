@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Personal</title>
+    <style>
+        @page { size: landscape; margin: 1cm; }
+        body { font-family: Arial, sans-serif; font-size: 9px; }
+        h1 { text-align: center; font-size: 16px; margin-bottom: 10px; }
+        .header { text-align: center; font-size: 10px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; font-size: 7px; }
+        th, td { border: 1px solid #000; padding: 2px 4px; text-align: left; }
+        th { background-color: #f0f0f0; font-weight: bold; }
+        .footer { margin-top: 20px; font-size: 8px; text-align: right; }
+    </style>
+</head>
+<body>
+    <h1>REPORTE DE PERSONAL POLICIAL</h1>
+    <div class="header">
+        <p>Fecha: {{ date }} | Hora: {{ time }}</p>
+        <p>Estado: {{ filter_status }}</p>
+        <p>Total de Registros: {{ personnel|length }}</p>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>N°</th>
+                <th>Grado</th>
+                <th>Apellidos</th>
+                <th>Nombres</th>
+                <th>C.I.</th>
+                <th>Edad</th>
+                <th>Género</th>
+                <th>Celular</th>
+                <th>Destino</th>
+                <th>Antigüedad</th>
+                <th>Dirección</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in personnel %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ p.grade.grade_abbr|default:"" }}</td>
+                <td>{{ p.last_name }} {{ p.maternal_name }}</td>
+                <td>{{ p.first_name }} {{ p.middle_name|default:"" }}</td>
+                <td>{{ p.identity_card }}</td>
+                <td>{{ p.age|default:"" }}</td>
+                <td>{{ p.genre|default:"" }}</td>
+                <td>{{ p.phone|default:"" }}</td>
+                <td>{{ p.current_destination.name|default:"" }}</td>
+                <td>{% if p.years_age %}{{ p.years_age }} años{% else %}{% endif %}</td>
+                <td>{{ p.address|default:"" }} {{ p.area|default:"" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="footer">
+        <p>Generado por Sigetsop - Sistema de Gestión de Personal Policial</p>
+    </div>
+</body>
+</html>
