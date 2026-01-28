@@ -1,7 +1,6 @@
 # --- Global ---
 AGENTS.md
 .env
-.env.*
 *.log
 DELETED_BY_DOCKER/
 .DS_Store

@@ -27,6 +27,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr \
     ffmpeg \
     libssl-dev \
+    libzbar0 \
+    ccache \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies

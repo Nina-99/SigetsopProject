@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # Install dependencies
-RUN npm install --legacy-peer-deps --network-timeout 1000000
+RUN npm install --legacy-peer-deps --fetch-timeout=1000000
 
 # Copy project files
 COPY . .
