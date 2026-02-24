@@ -2,9 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { avc09 } from "../../services";
 
-const LOCAL_IP = import.meta.env.VITE_IP_URL;
-// Endpoint de consumo que creamos en la respuesta inicial de DRF:
-const CONSUME_TOKEN_URL_BASE = `http://${LOCAL_IP}:8000/api/consume-mobile-token/`;
+const CONSUME_TOKEN_URL_BASE = `${import.meta.env.VITE_API_URL}/consume-mobile-token/`;
 
 const MobileAuthConsumer: React.FC = () => {
   // Captura el :tokenKey de la URL (ej: /auth/mobile-login/xyz123)
@@ -40,9 +38,11 @@ const MobileAuthConsumer: React.FC = () => {
           `✅ Sesión iniciada como ${username}. Redirigiendo a la subida...`,
         );
 
+        const sessionId = new URLSearchParams(window.location.search).get("session_id");
+
         setTimeout(() => {
-          // 💡 REDIRECCIÓN FINAL AL COMPONENTE DE SUBIDA MÓVIL
-          navigate("/upload/mobile", { replace: true });
+          // 💡 REDIRECCIÓN FINAL AL COMPONENTE DE SUBIDA MÓVIL con el session_id para el WS
+          navigate(`/upload/mobile/${sessionId ? `?session_id=${sessionId}` : ""}`, { replace: true });
         }, 1500);
       } catch (error: any) {
         console.error("❌ Error al consumir el tóken:", error);

@@ -82,14 +82,6 @@ export function AppRouter() {
             }
           />
           <Route
-            path="/auth/mobile-login/:tokenKey"
-            element={
-              <ProtectedRoute>
-                <MobileAuthConsumer />
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/avc09"
             element={
               <ProtectedRoute>
@@ -187,6 +179,7 @@ export function AppRouter() {
 
         <Route path="/signin" element={<SignIn />} />
         <Route path="/register" element={<SignUp />} />
+        <Route path="/auth/mobile-login/:tokenKey" element={<MobileAuthConsumer />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

@@ -32,6 +32,7 @@ from server import settings
 urlpatterns = [
     path("api/token/", CustomTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/", include("tokens.urls")),
     path("admin/", admin.site.urls),
     path("api/", include("users.urls")),
     path("api/", include("grades.urls")),
@@ -44,7 +45,6 @@ urlpatterns = [
     path("api/", include("hospital.urls")),
     path("api/", include("file_personnel.urls")),
     path("api/", include("police_unit.urls")),
-    path("api/", include("tokens.urls")),
     path("api/", include("prenatal_care.urls")),
     path("api/", include("natal_data.urls")),
 ]  # + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

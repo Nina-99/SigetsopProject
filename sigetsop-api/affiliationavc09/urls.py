@@ -21,8 +21,6 @@ urlpatterns = [
     ),
     # path("upload/", views.Uplo.as_view(), name="upload"),
     path("process/", views.CorrectAndOcrView.as_view(), name="process-image"),
-    path("generate-mobile-token/", views.GenerateMobileTokenView.as_view()),
-    path("exchange-mobile-token/", views.ExchangeMobileTokenView.as_view()),
     path("upload/mobile/", views.MobileUploadView.as_view()),
     path("avc09/export/csv/", export_avc09_csv, name="avc09-export-csv"),
     path("avc09/export/pdf/", export_avc09_pdf, name="avc09-export-pdf"),

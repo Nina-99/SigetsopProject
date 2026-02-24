@@ -1,3 +1,8 @@
+postgres_data
+postgres_data/
+**/postgres_data
+**/postgres_data/
+postgres_data_old
 **/__pycache__
 *.pyc
 *.pyo
@@ -9,7 +14,6 @@
 .gitignore
 venv/
 venv_sigetsop/
-postgres_data*/
 media/
 static/
 temp_uploads/

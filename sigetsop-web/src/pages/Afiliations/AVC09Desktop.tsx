@@ -9,9 +9,8 @@ import { OcrData } from "../../types";
 import { avc09 } from "../../services";
 import Swal from "sweetalert2";
 
-const LOCAL_IP = import.meta.env.VITE_IP_URL;
-const MOBILE_AUTH_URL_BASE = `http://${LOCAL_IP}:5173/mobile-link`;
-const API_TOKEN_URL = `http://${LOCAL_IP}:8000/api/generate-mobile-token/`;
+const MOBILE_AUTH_URL_BASE = `${window.location.origin}/auth/mobile-login`;
+const API_TOKEN_URL = `${import.meta.env.VITE_API_URL}/generate-mobile-token/`;
 
 const AVC09Desktop: React.FC = () => {
   const [sessionTokenKey, setSessionTokenKey] = useState<string | null>(null);
@@ -31,7 +30,7 @@ const AVC09Desktop: React.FC = () => {
     if (isMobile || sessionTokenKey || isLoading || sessionId) return;
 
     // Asegúrate de que tu URL de WebSocket sea correcta (usando ws:// o wss://)
-    const WS_URL = `ws://${LOCAL_IP}:8000/ws/upload-link/`;
+    const WS_URL = `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ws/upload-link/`;
 
     try {
       const ws = new WebSocket(WS_URL);
@@ -103,7 +102,7 @@ const AVC09Desktop: React.FC = () => {
         wsRef.current.close();
       }
     };
-  }, [isMobile, isLoading, sessionTokenKey, sessionId, LOCAL_IP]);
+  }, [isMobile, isLoading, sessionTokenKey, sessionId]);
 
   // 🔍 Detectar si el usuario está en un dispositivo móvil
   useEffect(() => {
@@ -150,7 +149,7 @@ const AVC09Desktop: React.FC = () => {
           );
         } else if (err.code === "ERR_NETWORK") {
           setError(
-            `❌ Error de red. Verifique que Django esté corriendo en ${LOCAL_IP}:8000.`,
+            `❌ Error de red. Verifique que la API esté disponible en ${import.meta.env.VITE_API_URL}.`,
           );
         } else {
           setError(

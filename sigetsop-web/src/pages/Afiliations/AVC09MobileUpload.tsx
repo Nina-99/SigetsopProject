@@ -6,8 +6,7 @@ import LiveEdgeDetector from "../../components/afiliations/LiveEdgeDetector";
 import { PointCorrector } from "../../components";
 import Swal from "sweetalert2";
 
-const LOCAL_IP = import.meta.env.VITE_IP_URL;
-const API_EXCHANGE_URL = `http://${LOCAL_IP}:8000/api/exchange-mobile-token/`;
+const API_EXCHANGE_URL = `${import.meta.env.VITE_API_URL}/exchange-mobile-token/`;
 
 interface PointsObject {
   // Asumiendo que Points es un array de [number, number]
@@ -22,7 +21,7 @@ const AVC09MobileUpload: React.FC = () => {
 
   const navigate = useNavigate();
 
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem("token"));
   const [authError, setAuthError] = useState<string | null>(null);
 
   const hasFetched = useRef(false);

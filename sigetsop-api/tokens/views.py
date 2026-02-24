@@ -27,13 +27,11 @@ class GenerateMobileTokenView(APIView):
     """
 
     permission_classes = [IsAuthenticated]  # 🔥 AHORA SÍ FUNCIONA
-    authentication_classes = []  # Usa Django Session Auth por defecto
 
     def post(self, request):
 
         token = MobileSessionToken.objects.create(
-            user=request.user,  # 🔥 Ahora es CustomUser, ya no AnonymousUser
-            device=request.data.get("device"),
+            user=request.user,
             key=str(uuid.uuid4()),
             expires_at=timezone.now() + timezone.timedelta(minutes=5),
         )
@@ -54,7 +52,11 @@ class ConsumeMobileTokenView(APIView):
         if not token.is_valid():
             return Response({"detail": "Token expirado"}, status=401)
 
-        token.consumed = True
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        refresh = RefreshToken.for_user(token.user)
+
+        token.is_used = True
         token.save()
 
         return Response(
@@ -62,6 +64,7 @@ class ConsumeMobileTokenView(APIView):
                 "detail": "Token válido",
                 "user_id": token.user.id,
                 "username": token.user.username,
+                "auth_token": str(refresh.access_token),
             }
         )
 
