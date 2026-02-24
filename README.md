@@ -1,72 +1,90 @@
-# 🚀 SigetsopProject - Guía de Despliegue Nativo
+# 🚀 SigetsopProject - Guía de Despliegue con Docker
 
-Este proyecto ha sido optimizado para ejecutarse de forma nativa en **Debian 12 (Bookworm)**, utilizando **Nginx** como servidor web y **Daphne (ASGI)** para la API y WebSockets.
+Este proyecto está configurado para un despliegue rápido y seguro utilizando **Docker** y **Docker Compose**. Esta arquitectura permite servir el frontend (React), la API (Django/Daphne), la base de datos (PostgreSQL) y el sistema de mensajería (Redis) de forma aislada y eficiente.
 
 ---
 
 ## 🏗️ Arquitectura de Producción
 
-- **Frontend**: Servido por Nginx en el puerto `80`.
-- **Backend (API/WS)**: Gestionado por Daphne en el puerto `8000` (interno).
-- **Base de Datos**: PostgreSQL 15.
-- **Cache/WebSockets**: Redis Server.
+- **Frontend/Nginx**: Puerto público `6090` (Punto de entrada).
+- **Backend (API/WebSockets)**: Gestionado por Daphne internamente.
+- **Base de Datos**: PostgreSQL 16.
+- **Cache/WebSockets**: Redis 7.
+- **IP Servidor**: `200.110.50.35`
 
 ---
 
-## 🛠️ Instalación Automatizada
+## 🛠️ Requisitos Previos
 
-El despliegue es completamente automático y no requiere configuración manual de archivos `.env`.
-
-### 1. Preparar el Script
-Otorga permisos de ejecución al script de despliegue:
-
-```bash
-chmod +x deploy_sigetsop.sh
-```
-
-### 2. Ejecutar el Despliegue
-Ejecuta el script (se recomienda usar `sudo` ya que instalará dependencias de sistema y configurará Nginx):
-
-```bash
-sudo ./deploy_sigetsop.sh
-```
-
-> **Nota sobre la IP**: El script detectará automáticamente tu IP pública (ej. `200.110.50.35`) y configurará tanto el Frontend como el Backend para funcionar con ella. Si deseas forzar una IP o dominio específico, puedes pasarlo como argumento: `./deploy_sigetsop.sh mi-dominio.com`.
+1. Docker y Docker Compose instalados.
+2. Tu usuario debe tener permisos para ejecutar Docker (pertenecer al grupo `docker`).
 
 ---
 
-## 💾 Datos y Migraciones
+## 🚀 Pasos para el Despliegue
 
-El script realiza automáticamente las siguientes acciones:
-1. Ejecuta `python manage.py migrate` para crear la estructura.
-2. Importa el archivo `sigetsop_police.sql`.
-3. Gestiona las dependencias circulares entre **Unidades** y **Personal** desactivando temporalmente las restricciones de integridad.
+### 1. Configuración de Entorno
+
+Copia los archivos de ejemplo para crear los archivos de configuración reales:
+
+```bash
+cp sigetsop-api/.env.example sigetsop-api/.env
+cp sigetsop-web/.env.example sigetsop-web/.env
+```
+
+### 2. Levantar la Infraestructura
+
+Construye las imágenes e inicia los servicios en segundo plano:
+
+```bash
+docker-compose up --build -d
+```
+
+### 3. Preparar la Base de Datos
+
+Ejecuta las migraciones de Django:
+
+```bash
+docker exec -it sigetsop_backend python manage.py migrate
+```
+
+### 4. Importación de Datos Policiales (`sigetsop_police.sql`)
+
+Importa los datos históricos respetando las dependencias circulares (Unidades -> Personal):
+
+```bash
+(echo "SET session_replication_role = 'replica';"; cat sigetsop_police.sql; echo "SET session_replication_role = 'origin';") | docker exec -i sigetsop_db psql -U sigetsop -d sigetsop_db
+```
+
+### 5. Crear Superusuario
+
+Para acceder al panel de administración:
+
+```bash
+docker exec -it sigetsop_backend python manage.py createsuperuser
+```
 
 ---
 
 ## 🔍 Mantenimiento y Logs
 
-### Crear Superusuario
-Para acceder al panel de administración de Django:
+### Ver Logs de los Contenedores
+
 ```bash
-cd sigetsop-api
-source venv/bin/activate
-python manage.py createsuperuser
+docker-compose logs -f [nombre_servicio]
 ```
 
-### Ver Logs en Tiempo Real
-Si necesitas depurar el backend o el procesamiento de OCR:
+### Reiniciar un Servicio Específico
+
 ```bash
-sudo journalctl -u sigetsop-backend -f
+docker-compose restart backend
 ```
 
-### Reiniciar Servicios
-Si realizas cambios en el código del backend:
-```bash
-sudo systemctl restart sigetsop-backend
-```
+---
 
-Si cambias el frontend, deberás ejecutar `npm run build` en la carpeta `sigetsop-web`.
+## 💾 Despliegue Nativo (Alternativo)
+
+Si dispones de privilegios de root y prefieres una instalación directa en el sistema, puedes utilizar el script legacy: `deploy_sigetsop.sh`.
 
 ---
 

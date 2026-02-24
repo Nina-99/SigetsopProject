@@ -10,6 +10,19 @@ DB_USER="sigetsop_user"
 DB_PASS="sigetsop_password" # Se recomienda cambiar después
 PROJECT_ROOT=$(pwd)
 
+# Detectar si necesitamos sudo o somos root
+if [ "$(id -u)" -eq 0 ]; then
+    SUDO=""
+else
+    if command -v sudo >/dev/null 2>&1; then
+        SUDO="sudo"
+    else
+        echo "❌ Error: Este script requiere privilegios de root y 'sudo' no está instalado."
+        echo "Por favor, entre como root (su -) e instálelo: apt update && apt install sudo -y"
+        exit 1
+    fi
+fi
+
 # Verificar que estamos en la raíz del proyecto
 if [ ! -d "$PROJECT_ROOT/sigetsop-api" ] || [ ! -d "$PROJECT_ROOT/sigetsop-web" ]; then
     echo "❌ Error: El script debe ejecutarse desde la raíz del proyecto SigetsopProject."
@@ -19,6 +32,11 @@ fi
 BACKEND_DIR="$PROJECT_ROOT/sigetsop-api"
 FRONTEND_DIR="$PROJECT_ROOT/sigetsop-web"
 
+# Asegurar herramientas básicas antes de la detección de IP
+echo "📦 Asegurando herramientas básicas (curl)..."
+$SUDO apt update
+$SUDO apt install -y curl python3-venv python3-pip
+
 # Detección inteligente de IP (1. Argumento, 2. Pública via Curl, 3. Primera IP de hostname)
 SERVER_IP=${1:-$(curl -s ifconfig.me || hostname -I | awk '{print $1}')}
 
@@ -27,20 +45,21 @@ echo "📍 IP Detectada para Despliegue: $SERVER_IP"
 
 # 1. Instalación de dependencias de sistema
 echo "📦 Instalando paquetes de sistema..."
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y python3-pip python3-venv postgresql postgresql-contrib \
+$SUDO apt install -y postgresql postgresql-contrib \
     redis-server nginx nodejs npm git libpq-dev \
     libgl1-mesa-glx libglib2.0-0 tesseract-ocr
 
 # 2. Configuración de PostgreSQL
 echo "🗄️ Configurando base de datos..."
-sudo -u postgres psql -c "CREATE DATABASE $DB_NAME;"
-sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASS';"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
+$SUDO -u postgres psql -c "CREATE DATABASE $DB_NAME;"
+$SUDO -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASS';"
+$SUDO -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
 
 # 3. Preparación del Backend
 echo "🐍 Configurando Backend (Django + Daphne)..."
 cd "$BACKEND_DIR"
+# Limpiar venv previo si falló
+rm -rf venv
 python3 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
@@ -61,8 +80,8 @@ REDIS_URL=redis://127.0.0.1:6379/0
 DJANGO_ALLOWED_HOSTS=$SERVER_IP,*,localhost,127.0.0.1
 EOF
 
-# Ejecutar migraciones
-python manage.py migrate
+# Ejecutar migraciones usando el python del venv
+./venv/bin/python manage.py migrate
 
 # 4. Importación de Datos (Manejo de dependencias circulares)
 echo "📥 Importando datos desde sigetsop_police.sql..."
@@ -84,7 +103,7 @@ npm run build
 
 # 6. Configuración de servicios de sistema (Daphne)
 echo "⚙️ Configurando Daphne como servicio..."
-sudo bash -c "cat <<EOF > /etc/systemd/system/sigetsop-backend.service
+$SUDO bash -c "cat <<EOF > /etc/systemd/system/sigetsop-backend.service
 [Unit]
 Description=Daphne ASGI for Sigetsop
 After=network.target redis-server.service
@@ -101,13 +120,13 @@ Restart=always
 WantedBy=multi-user.target
 EOF"
 
-sudo systemctl daemon-reload
-sudo systemctl enable sigetsop-backend
-sudo systemctl start sigetsop-backend
+$SUDO systemctl daemon-reload
+$SUDO systemctl enable sigetsop-backend
+$SUDO systemctl start sigetsop-backend
 
 # 7. Configuración de Nginx (Proxy Inverso)
 echo "🌐 Configurando Nginx..."
-sudo bash -c "cat <<EOF > /etc/nginx/sites-available/sigetsop
+$SUDO bash -c "cat <<EOF > /etc/nginx/sites-available/sigetsop
 server {
     listen 80;
     server_name _; # Responde a cualquier IP o dominio que apunte aquí
@@ -144,9 +163,9 @@ server {
 }
 EOF"
 
-sudo ln -s /etc/nginx/sites-available/sigetsop /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default
-sudo systemctl restart nginx
+$SUDO ln -sf /etc/nginx/sites-available/sigetsop /etc/nginx/sites-enabled/
+$SUDO rm -f /etc/nginx/sites-enabled/default
+$SUDO systemctl restart nginx
 
 echo "--- ✅ Instalación Completa ---"
 echo "URL: http://$SERVER_IP"
