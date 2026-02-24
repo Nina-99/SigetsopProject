@@ -25,7 +25,7 @@ services:
 
   backend:
     build:
-      context: ./sigetsop-api
+      context: ./backend-build
     container_name: sigetsop_backend
     restart: always
     ports:
@@ -34,7 +34,7 @@ services:
       - db
       - redis
     environment:
-      SECRET_KEY: "django-insecure-s9hqda@)syn*__5ea6$e1v_deo9x+moe@s7ll6vvvp9wr0zt7n"
+      SECRET_KEY: "django-insecure-s9hqda@)syn*__5ea6$$e1v_deo9x+moe@s7ll6vvvp9wr0zt7n"
       POSTGRES_DB: ddsbs
       POSTGRES_USER: sigetsop
       POSTGRES_PASSWORD: "sigetsop"
@@ -42,9 +42,9 @@ services:
       POSTGRES_PORT: 5432
       REDIS_URL: redis://redis:6379/0
       DEBUG: "False"
-      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,backend,200.110.50.35"
-      DJANGO_CORS_ALLOWED_ORIGINS: "http://localhost:6090,http://127.0.0.1:6090,http://200.110.50.35:6090"
-      DJANGO_CSRF_TRUSTED_ORIGINS: "http://localhost:6090,http://127.0.0.1:6090,http://200.110.50.35:6090"
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,backend,192.168.1.17"
+      DJANGO_CORS_ALLOWED_ORIGINS: "http://localhost:6090,http://127.0.0.1:6090,http://192.168.1.17:6090"
+      DJANGO_CSRF_TRUSTED_ORIGINS: "http://localhost:6090,http://127.0.0.1:6090,http://192.168.1.17:6090"
     volumes:
       - ./sigetsop-api/media:/app/media
       - ./sigetsop-api/static:/app/static
@@ -55,6 +55,12 @@ services:
   frontend:
     build:
       context: ./sigetsop-web
+      args:
+        VITE_API_URL: "http://192.168.1.17:6090/api"
+        VITE_WS_URL: "ws://192.168.1.17:6090/ws/notifications/"
+        VITE_SERVER_IP: "192.168.1.17"
+        VITE_IP_URL: "192.168.1.17"
+        VITE_SOCKET_URL: "http://192.168.1.17:6090/api"
     container_name: sigetsop_frontend
     restart: always
     volumes:

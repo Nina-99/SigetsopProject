@@ -14,13 +14,19 @@ from threading import Lock
 
 
 ocr_lock = Lock()
-# ocr = PaddleOCR(lang="es", use_angle_cls=True)
-ocr = PaddleOCR(lang="es", use_angle_cls=True, show_log=False)
+_ocr_instance = None
+
+
+def get_ocr():
+    global _ocr_instance
+    if _ocr_instance is None:
+        _ocr_instance = PaddleOCR(lang="es", use_angle_cls=True, show_log=False)
+    return _ocr_instance
 
 
 def get_safe_ocr_result(pil_img):
     with ocr_lock:
-        return ocr.ocr(pil_img, cls=True)
+        return get_ocr().ocr(pil_img, cls=True)
 
 
 def parse_date_safe(date_str: str):

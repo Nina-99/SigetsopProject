@@ -1,64 +1,73 @@
-# 🚀 SigetsopProject Deployment Guide
+# 🚀 SigetsopProject - Guía de Despliegue Nativo
 
-Este repositorio contiene la configuración unificada para el despliegue en producción del sistema Sigetsop, optimizado para el servidor externo.
-
-## 🏗️ Arquitectura de Red
-- **Frontend/Nginx**: Puerto `6090` (Punto de entrada único).
-- **Backend (API)**: Puerto `8000` (Interno, gestionado por Nginx).
-- **IP Servidor Externo**: `200.110.50.35`
+Este proyecto ha sido optimizado para ejecutarse de forma nativa en **Debian 12 (Bookworm)**, utilizando **Nginx** como servidor web y **Daphne (ASGI)** para la API y WebSockets.
 
 ---
 
-## 🛠️ Requisitos Previos
-1. Docker y Docker Compose instalados en el servidor.
-2. Puerto `6090` abierto en el firewall (Inbound).
+## 🏗️ Arquitectura de Producción
 
-## 🚀 Pasos para el Despliegue
+- **Frontend**: Servido por Nginx en el puerto `80`.
+- **Backend (API/WS)**: Gestionado por Daphne en el puerto `8000` (interno).
+- **Base de Datos**: PostgreSQL 15.
+- **Cache/WebSockets**: Redis Server.
 
-### 1. Configuración de Entorno
-Copia los archivos de ejemplo y edítalos con las credenciales reales:
+---
+
+## 🛠️ Instalación Automatizada
+
+El despliegue es completamente automático y no requiere configuración manual de archivos `.env`.
+
+### 1. Preparar el Script
+Otorga permisos de ejecución al script de despliegue:
+
 ```bash
-cp sigetsop-api/.env.example sigetsop-api/.env
-cp sigetsop-web/.env.example sigetsop-web/.env
+chmod +x deploy_sigetsop.sh
 ```
 
-### 2. Levantar la Infraestructura
-Construye las imágenes y levanta los servicios en segundo plano:
-```bash
-docker-compose up --build -d
-```
-*Nota: La opción `--build` es necesaria para inyectar la IP del servidor en el bundle del frontend.*
+### 2. Ejecutar el Despliegue
+Ejecuta el script (se recomienda usar `sudo` ya que instalará dependencias de sistema y configurará Nginx):
 
-### 3. Preparar el Backend
-Ejecuta las migraciones y recolecta archivos estáticos:
 ```bash
-docker-compose exec backend python manage.py migrate
-docker-compose exec backend python manage.py collectstatic --no-input
+sudo ./deploy_sigetsop.sh
 ```
 
----
-
-## 💾 Migración de Datos (`sigetsop_police`)
-
-Para migrar tus datos actuales al servidor externo:
-
-1. **En tu PC local (Exportar)**:
-   ```bash
-   pg_dump -U postgres -h localhost sigetsop_police > backup_data.sql
-   ```
-
-2. **En el Servidor Externo (Importar)**:
-   Asegúrate de que el contenedor de base de datos esté corriendo y ejecuta:
-   ```bash
-   cat backup_data.sql | docker exec -i sigetsop_db psql -U sigetsop -d ddsbs
-   ```
+> **Nota sobre la IP**: El script detectará automáticamente tu IP pública (ej. `200.110.50.35`) y configurará tanto el Frontend como el Backend para funcionar con ella. Si deseas forzar una IP o dominio específico, puedes pasarlo como argumento: `./deploy_sigetsop.sh mi-dominio.com`.
 
 ---
 
-## 🔍 Comandos Útiles
-- **Ver logs**: `docker-compose logs -f`
-- **Reiniciar servicios**: `docker-compose restart`
-- **Detener todo**: `docker-compose down`
+## 💾 Datos y Migraciones
+
+El script realiza automáticamente las siguientes acciones:
+1. Ejecuta `python manage.py migrate` para crear la estructura.
+2. Importa el archivo `sigetsop_police.sql`.
+3. Gestiona las dependencias circulares entre **Unidades** y **Personal** desactivando temporalmente las restricciones de integridad.
 
 ---
-**Desarrollado por: Sigetsop Team 2025**
+
+## 🔍 Mantenimiento y Logs
+
+### Crear Superusuario
+Para acceder al panel de administración de Django:
+```bash
+cd sigetsop-api
+source venv/bin/activate
+python manage.py createsuperuser
+```
+
+### Ver Logs en Tiempo Real
+Si necesitas depurar el backend o el procesamiento de OCR:
+```bash
+sudo journalctl -u sigetsop-backend -f
+```
+
+### Reiniciar Servicios
+Si realizas cambios en el código del backend:
+```bash
+sudo systemctl restart sigetsop-backend
+```
+
+Si cambias el frontend, deberás ejecutar `npm run build` en la carpeta `sigetsop-web`.
+
+---
+
+**Desarrollado por: Nina 2025**

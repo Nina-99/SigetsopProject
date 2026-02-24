@@ -9,7 +9,7 @@
 .gitignore
 venv/
 venv_sigetsop/
-postgres_data/
+postgres_data*/
 media/
 static/
 temp_uploads/
