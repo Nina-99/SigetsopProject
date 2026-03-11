@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { avc09 } from "../../services";
+import { useAuth } from "../../@core";
 
 const CONSUME_TOKEN_URL_BASE = `${import.meta.env.VITE_API_URL}/consume-mobile-token/`;
 
 const MobileAuthConsumer: React.FC = () => {
   // Captura el :tokenKey de la URL (ej: /auth/mobile-login/xyz123)
   const { tokenKey } = useParams<{ tokenKey: string }>();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [statusMessage, setStatusMessage] = useState(
     "Procesando autenticación...",
@@ -26,12 +28,12 @@ const MobileAuthConsumer: React.FC = () => {
           {},
         );
 
-        // El backend debe devolver el nuevo tóken JWT o DRF
-        const { auth_token, username } = response.data;
+        // El backend devuelve 'access' y 'refresh'
+        const { access, refresh, username } = response.data;
 
-        // 1. Guardar el nuevo tóken de autenticación en el móvil
-        // Esto permite que las futuras llamadas a /upload/mobile estén autenticadas
-        localStorage.setItem("token", auth_token);
+        // 1. Iniciar sesión formalmente en el context
+        // Esto actualiza el estado de React y guarda en localStorage automáticamente
+        login({ access, refresh });
 
         // 2. Notificar y Redirigir al componente de Subida Móvil
         setStatusMessage(

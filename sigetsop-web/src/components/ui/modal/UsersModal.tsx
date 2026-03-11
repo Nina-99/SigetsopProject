@@ -119,30 +119,12 @@ export default function UsersModal({
         username: usersToEdit.username || "",
         phone: String(usersToEdit.phone || ""),
         email: usersToEdit.email || "",
-        roleId: "",
+        roleId: usersToEdit.role_data?.id ?? usersToEdit.role ?? "",
       });
     } else {
       setUsersState(initialState);
     }
   }, [isOpen, isEditing, usersToEdit]);
-
-  useEffect(() => {
-    if (!isEditing || !usersToEdit || rolesOptions.length === 0) return;
-
-    const incomingRoleId = usersToEdit.role_data?.id ?? usersToEdit.role ?? "";
-
-    if (incomingRoleId !== "") {
-      const normalized =
-        typeof incomingRoleId === "number" || !isNaN(Number(incomingRoleId))
-          ? Number(incomingRoleId)
-          : String(incomingRoleId);
-
-      setUsersState((prev) => ({
-        ...prev,
-        roleId: normalized,
-      }));
-    }
-  }, [rolesOptions, isEditing, usersToEdit]);
 
   const handleChange = (fieldName: string) => (valueOrEvent: any) => {
     const newValue = valueOrEvent?.target?.value ?? valueOrEvent ?? "";
@@ -185,15 +167,20 @@ export default function UsersModal({
       roleForPayload = candidate;
     }
 
-    const payload = {
-      first_name: usersState.firstName.trim(),
-      last_name: usersState.lastName.trim(),
-      maternal_name: usersState.maternalName.trim(),
-      username: usersState.username.trim(),
-      phone: usersState.phone.trim(),
-      email: usersState.email.trim(),
-      role: roleForPayload,
-    };
+    const payload: any = isEditing
+      ? {
+          phone: usersState.phone.trim(),
+          role: roleForPayload,
+        }
+      : {
+          first_name: usersState.firstName.trim(),
+          last_name: usersState.lastName.trim(),
+          maternal_name: usersState.maternalName.trim(),
+          username: usersState.username.trim(),
+          phone: usersState.phone.trim(),
+          email: usersState.email.trim(),
+          role: roleForPayload,
+        };
 
     try {
       let response;

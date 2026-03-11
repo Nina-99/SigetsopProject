@@ -21,6 +21,12 @@ interface PersonnelModalProps {
   onClose: () => void;
   personnelToEdit: Personnel | null;
   onSave: (personnel: Personnel) => void;
+  initialData?: {
+    first_name?: string;
+    last_name?: string;
+    maternal_name?: string;
+    insured_number?: string;
+  };
 }
 
 type PersonnelState = {
@@ -83,12 +89,8 @@ const CloseIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-export default function PersonnelModal({
-  isOpen,
-  onClose,
-  personnelToEdit,
-  onSave,
-}: PersonnelModalProps) {
+export default function PersonnelModal(props: PersonnelModalProps) {
+  const { isOpen, onClose, personnelToEdit, onSave } = props;
   const [personnelState, setPersonnelState] =
     useState<PersonnelState>(initialState);
 
@@ -134,10 +136,18 @@ export default function PersonnelModal({
         reference: personnelToEdit.reference || "",
         referencePhone: personnelToEdit.reference_phone || "",
       });
+    } else if (props.initialData) {
+      setPersonnelState({
+        ...initialState,
+        firstName: props.initialData.first_name || "",
+        lastName: props.initialData.last_name || "",
+        maternalName: props.initialData.maternal_name || "",
+        insuredNumber: props.initialData.insured_number || "",
+      });
     } else {
       setPersonnelState(initialState);
     }
-  }, [isOpen, isEditing, personnelToEdit]);
+  }, [isOpen, isEditing, personnelToEdit, props.initialData]);
 
   // 2. Cargar listas desplegables (Grades y Units)
   useEffect(() => {

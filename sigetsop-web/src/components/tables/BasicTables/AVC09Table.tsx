@@ -10,6 +10,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AVC09, AVC09Service } from "../../../services";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import { DownloadIcon } from "../../../icons";
+import { ReportExportModal } from "../../index";
 
 const ITEMS_PER_PAGE_OPTIONS = [5, 10, 25, 50];
 
@@ -41,6 +43,9 @@ export default function AVC09Table() {
   const [data, setData] = useState<AVC09[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const [itemsPerPages, setItemsPerPages] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -148,7 +153,11 @@ export default function AVC09Table() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await AVC09Service.list();
+        setLoading(true);
+        const response = await AVC09Service.list({
+          from_date: startDate,
+          to_date: endDate,
+        });
         setData(response.data.results);
       } catch (error) {
         console.error("Error fetching personnel:", error);
@@ -157,7 +166,57 @@ export default function AVC09Table() {
       }
     };
     fetchData();
-  }, []);
+  }, [startDate, endDate]);
+
+  const handleExport = async (params: {
+    from_date: string;
+    to_date: string;
+    format: "pdf" | "csv";
+  }) => {
+    try {
+      setIsExportModalOpen(false);
+      Swal.fire({
+        title: `Exportando ${params.format.toUpperCase()}...`,
+        text: "Por favor espere mientras se genera el archivo.",
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+      });
+
+      const exportParams = {
+        from_date: params.from_date,
+        to_date: params.to_date,
+      };
+
+      const response =
+        params.format === "csv"
+          ? await AVC09Service.exportCSV(exportParams)
+          : await AVC09Service.exportPDF(exportParams);
+
+      const blob = new Blob([response.data], {
+        type: params.format === "csv" ? "text/csv" : "application/pdf",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `avc09_${new Date().toISOString().slice(0, 10)}.${params.format}`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+
+      Swal.fire({
+        icon: "success",
+        title: "¡Éxito!",
+        text: `El archivo ${params.format.toUpperCase()} ha sido descargado correctamente.`,
+        timer: 3000,
+      });
+    } catch (error) {
+      console.error(error);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: `No se pudo exportar el archivo ${params.format.toUpperCase()}. Inténtelo de nuevo.`,
+      });
+    }
+  };
 
   const getValue = (
     avc09: AVC09,
@@ -350,6 +409,40 @@ export default function AVC09Table() {
                     filas
                   </span>
                 </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Desde:
+                    </label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="dark:bg-dark-900 h-9 rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white/90"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Hasta:
+                    </label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="dark:bg-dark-900 h-9 rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white/90"
+                    />
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setStartDate("");
+                      setEndDate("");
+                    }}
+                    className="h-9 px-3 text-xs"
+                    variant="outline"
+                  >
+                    Limpiar
+                  </Button>
+                </div>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <div className="relative">
                     <form>
@@ -385,6 +478,13 @@ export default function AVC09Table() {
                     onClick={handleCreate}
                   >
                     + Nuevo
+                  </Button>
+                  <Button
+                    onClick={() => setIsExportModalOpen(true)}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg transition px-4 py-3 ring-1 ring-inset ring-gray-300 hover:bg-brand-50 dark:bg-gray-800 dark:text-brand-400 dark:ring-gray-700 dark:hover:bg-brand-900/[0.3] dark:hover:text-brand-300"
+                  >
+                    <DownloadIcon className="w-4 h-4" />
+                    Generar Reporte
                   </Button>
                 </div>
               </div>
@@ -506,6 +606,13 @@ export default function AVC09Table() {
           </div>
         </div>
       </div>
+
+      <ReportExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        onExport={handleExport}
+        title="Generar Reporte AVC09"
+      />
     </div>
   );
 }

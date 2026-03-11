@@ -25,7 +25,7 @@ services:
 
   backend:
     build:
-      context: ./sigetsop-api
+      context: ./temp_backend_build
     container_name: sigetsop_backend
     restart: always
     ports:

@@ -11,6 +11,7 @@ import { AVC09, AVC09Service } from "../../../services";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { DownloadIcon } from "../../../icons";
+import { ReportExportModal } from "../../index";
 
 const ITEMS_PER_PAGE_OPTIONS = [5, 10, 25, 50];
 
@@ -41,6 +42,9 @@ export default function SickLeaveTable() {
   const [data, setData] = useState<AVC09[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const [itemsPerPages, setItemsPerPages] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -151,7 +155,11 @@ export default function SickLeaveTable() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await AVC09Service.list();
+        setLoading(true);
+        const response = await AVC09Service.list({
+          from_date: startDate,
+          to_date: endDate,
+        });
         setData(response.data.results);
       } catch (error) {
         console.error("Error fetching personnel:", error);
@@ -160,7 +168,7 @@ export default function SickLeaveTable() {
       }
     };
     fetchData();
-  }, []);
+  }, [startDate, endDate]);
 
   const getValue = (
     avc09: AVC09,
@@ -242,68 +250,53 @@ export default function SickLeaveTable() {
     return Array.from(new Set(range));
   }, [totalPages, currentPage]);
 
-  const handleExportCSV = async () => {
+  const handleExport = async (params: {
+    from_date: string;
+    to_date: string;
+    format: "pdf" | "csv";
+  }) => {
     try {
+      setIsExportModalOpen(false);
       Swal.fire({
-        title: "Exportando CSV...",
+        title: `Exportando ${params.format.toUpperCase()}...`,
         text: "Por favor espere mientras se genera el archivo.",
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading(),
       });
-      const response = await AVC09Service.exportCSV({ 
-        filter_state: "ENTREGAR" // Solo exportar bajas pendientes de entrega
-      });
-      const blob = new Blob([response.data], { type: "text/csv" });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `bajas_avc09_${new Date().toISOString().slice(0, 10)}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-      Swal.fire({
-        icon: "success",
-        title: "¡Éxito!",
-        text: "El archivo CSV ha sido descargado correctamente.",
-        timer: 3000,
-      });
-    } catch (error) {
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "No se pudo exportar el archivo CSV. Inténtelo de nuevo.",
-      });
-    }
-  };
 
-  const handleExportPDF = async () => {
-    try {
-      Swal.fire({
-        title: "Exportando PDF...",
-        text: "Por favor espere mientras se genera el archivo.",
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading(),
+      const exportParams = {
+        filter_state: "ENTREGAR",
+        from_date: params.from_date,
+        to_date: params.to_date,
+      };
+
+      const response =
+        params.format === "csv"
+          ? await AVC09Service.exportCSV(exportParams)
+          : await AVC09Service.exportPDF(exportParams);
+
+      const blob = new Blob([response.data], {
+        type: params.format === "csv" ? "text/csv" : "application/pdf",
       });
-      const response = await AVC09Service.exportPDF({ 
-        filter_state: "ENTREGAR" // Solo exportar bajas pendientes de entrega
-      });
-      const blob = new Blob([response.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `bajas_avc09_${new Date().toISOString().slice(0, 10)}.pdf`;
+      a.download = `bajas_avc09_${new Date().toISOString().slice(0, 10)}.${params.format}`;
       a.click();
       window.URL.revokeObjectURL(url);
+
       Swal.fire({
         icon: "success",
         title: "¡Éxito!",
-        text: "El archivo PDF ha sido descargado correctamente.",
+        text: `El archivo ${params.format.toUpperCase()} ha sido descargado correctamente.`,
         timer: 3000,
       });
     } catch (error) {
+      console.error(error);
       Swal.fire({
         icon: "error",
         title: "Error",
-        text: "No se pudo exportar el archivo PDF. Inténtelo de nuevo.",
+        text: `No se pudo exportar el archivo ${params.format.toUpperCase()}. Inténtelo de nuevo.`,
       });
     }
   };
@@ -416,6 +409,41 @@ export default function SickLeaveTable() {
                     filas
                   </span>
                 </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Desde:
+                    </label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="dark:bg-dark-900 h-9 rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white/90"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Hasta:
+                    </label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="dark:bg-dark-900 h-9 rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white/90"
+                    />
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setStartDate("");
+                      setEndDate("");
+                    }}
+                    className="h-9 px-3 text-xs"
+                    variant="outline"
+                  >
+                    Limpiar
+                  </Button>
+                </div>
+
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <div className="relative">
                     <form>
@@ -453,23 +481,14 @@ export default function SickLeaveTable() {
                     + Nuevo
                   </Button>
 
-                  {/* Botones de Exportación */}
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleExportCSV}
-                      className="inline-flex items-center justify-center gap-2 rounded-lg transition px-4 py-3 ring-1 ring-inset ring-gray-300 hover:bg-green-50 dark:bg-gray-800 dark:text-green-400 dark:ring-gray-700 dark:hover:bg-green-900/[0.3] dark:hover:text-green-300"
-                    >
-                      <DownloadIcon className="w-4 h-4" />
-                      CSV
-                    </Button>
-                    <Button
-                      onClick={handleExportPDF}
-                      className="inline-flex items-center justify-center gap-2 rounded-lg transition px-4 py-3 ring-1 ring-inset ring-gray-300 hover:bg-red-50 dark:bg-gray-800 dark:text-red-400 dark:ring-gray-700 dark:hover:bg-red-900/[0.3] dark:hover:text-red-300"
-                    >
-                      <DownloadIcon className="w-4 h-4" />
-                      PDF
-                    </Button>
-                  </div>
+                  {/* Botón para Abrir Modal de Reporte */}
+                  <Button
+                    onClick={() => setIsExportModalOpen(true)}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg transition px-4 py-3 ring-1 ring-inset ring-gray-300 hover:bg-brand-50 dark:bg-gray-800 dark:text-brand-400 dark:ring-gray-700 dark:hover:bg-brand-900/[0.3] dark:hover:text-brand-300"
+                  >
+                    <DownloadIcon className="w-4 h-4" />
+                    Generar Reporte
+                  </Button>
                 </div>
               </div>
               <div className="max-w-full overflow-x-auto custom-scrollbar">
@@ -588,6 +607,12 @@ export default function SickLeaveTable() {
           </div>
         </div>
       </div>
+
+      <ReportExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        onExport={handleExport}
+      />
     </div>
   );
 }

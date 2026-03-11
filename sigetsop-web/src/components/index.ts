@@ -9,3 +9,4 @@ export * from "./router";
 export * from "./tables";
 export * from "./ui";
 export * from "./UserProfile";
+export { default as ReportExportModal } from "./common/ReportExportModal";

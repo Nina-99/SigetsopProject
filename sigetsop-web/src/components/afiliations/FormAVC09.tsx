@@ -3,7 +3,12 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import "./FormAVC09.css";
 import { Button, PersonnelModal } from "../ui";
-import { AVC09Service, Personnel, PersonnelService } from "../../services";
+import {
+  AVC09Service,
+  HospitalService,
+  Personnel,
+  PersonnelService,
+} from "../../services";
 
 interface IncapacityData {
   LastName: string;
@@ -231,6 +236,28 @@ const FormAVC09: React.FC = () => {
     if (!formData) return;
     console.log("personnelId", personnelId);
     try {
+      // Intentar encontrar el hospital por nombre
+      let hospitalId: number | null = null;
+      const hospitalName = formData.Hospital.toUpperCase().trim();
+
+      if (hospitalName) {
+        const hospitalsRes = await HospitalService.list();
+        const hospitals = hospitalsRes.data.results || hospitalsRes.data;
+        const foundHospital = hospitals.find(
+          (h: any) => h.name.toUpperCase().trim() === hospitalName,
+        );
+
+        if (foundHospital) {
+          hospitalId = foundHospital.id;
+        } else {
+          // Si no existe, crearlo
+          const newHospitalRes = await HospitalService.create({
+            name: hospitalName,
+          });
+          hospitalId = newHospitalRes.data.id;
+        }
+      }
+
       const payload = {
         personnel: personnelId,
         insured_number: formData.InsuredNumber.toUpperCase(),
@@ -242,7 +269,7 @@ const FormAVC09: React.FC = () => {
         from_date: convertToISO(formData.FromDate.toUpperCase()),
         to_date: convertToISO(formData.ToDate.toUpperCase()),
         days_incapacity: formData.DaysIncapacity.toUpperCase(),
-        hospital: formData.Hospital.toUpperCase(),
+        hospital: hospitalId,
         matricula: formData.Matricula.toUpperCase(),
         state: "ENTREGAR",
       };
@@ -394,12 +421,12 @@ const FormAVC09: React.FC = () => {
 
       if (!personnelFound) {
         const result = await Swal.fire({
-          title: "¿No existe este personal?",
-          text: "Revise si cometió un error en la escritura. ¿Desea corregir o crear un nuevo personal?",
-          icon: "warning",
+          title: "¿Personal no encontrado?",
+          text: `No se encontró personal con N° Asegurado '${insuredNumber}' ni por nombre '${fullName}'. ¿Desea crear un nuevo registro con los datos del formulario?`,
+          icon: "question",
           showCancelButton: true,
-          confirmButtonText: "Crear nuevo",
-          cancelButtonText: "Corregir",
+          confirmButtonText: "Sí, crear y guardar",
+          cancelButtonText: "No, corregir",
         });
 
         if (!result.isConfirmed) {

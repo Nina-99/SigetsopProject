@@ -14,8 +14,8 @@ interface ExtendedLeavesStats {
 }
 
 export const AVC09Service = {
-  list() {
-    return api.get(BASE_URL);
+  list(params?: any) {
+    return api.get(BASE_URL, { params });
   },
 
   create(data: any) {

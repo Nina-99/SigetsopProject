@@ -206,8 +206,19 @@ class CorrectAndOcrView(views.APIView):
 
 class AffiliationAVC09ViewSet(viewsets.ModelViewSet):
     queryset = AffiliationAVC09.objects.all()
-
     serializer_class = AffiliationAVC09Serializer
+
+    def get_queryset(self):
+        queryset = AffiliationAVC09.objects.filter(deleted_at__isnull=True)
+        from_date = self.request.query_params.get("from_date")
+        to_date = self.request.query_params.get("to_date")
+
+        if from_date:
+            queryset = queryset.filter(from_date__gte=from_date)
+        if to_date:
+            queryset = queryset.filter(to_date__lte=to_date)
+
+        return queryset
 
     def update(self, request, *args, **kwargs):
         partial = True  # permite actualizaciones parciales SIEMPRE
@@ -454,12 +465,20 @@ from server.export_utils import IsAdminOrAuxiliarSIT
 def export_avc09_csv(request):
     """Exportar AVC09 a CSV"""
     filter_state = request.query_params.get("filter_state", None)
+    from_date = request.query_params.get("from_date")
+    to_date = request.query_params.get("to_date")
 
     avc09_list = AffiliationAVC09.objects.filter(deleted_at__isnull=True)
 
     # Agregar filtro por estado si se especifica
     if filter_state:
         avc09_list = avc09_list.filter(state=filter_state)
+
+    # Agregar filtro por rango de fechas
+    if from_date:
+        avc09_list = avc09_list.filter(from_date__gte=from_date)
+    if to_date:
+        avc09_list = avc09_list.filter(to_date__lte=to_date)
 
     avc09_list = avc09_list.select_related(
         "personnel", "personnel__grade", "hospital"
@@ -518,12 +537,20 @@ def export_avc09_pdf(request):
     from django.utils import timezone
 
     filter_state = request.query_params.get("filter_state", None)
+    from_date = request.query_params.get("from_date")
+    to_date = request.query_params.get("to_date")
 
     avc09_list = AffiliationAVC09.objects.filter(deleted_at__isnull=True)
 
     # Agregar filtro por estado si se especifica
     if filter_state:
         avc09_list = avc09_list.filter(state=filter_state)
+
+    # Agregar filtro por rango de fechas
+    if from_date:
+        avc09_list = avc09_list.filter(from_date__gte=from_date)
+    if to_date:
+        avc09_list = avc09_list.filter(to_date__lte=to_date)
 
     avc09_list = avc09_list.select_related(
         "personnel", "personnel__grade", "hospital"
@@ -537,6 +564,9 @@ def export_avc09_pdf(request):
         "filter_status": f"Estado: {filter_state}"
         if filter_state
         else "Todos los estados",
+        "filter_date": f"Desde: {from_date} Hasta: {to_date}"
+        if from_date or to_date
+        else "",
         "total": avc09_list.count(),
     }
 
@@ -556,12 +586,20 @@ def export_avc09_pdf(request):
 def export_avc09_all_json(request):
     """Exportar AVC09 como JSON"""
     filter_state = request.query_params.get("filter_state", None)
+    from_date = request.query_params.get("from_date")
+    to_date = request.query_params.get("to_date")
 
     avc09_list = AffiliationAVC09.objects.filter(deleted_at__isnull=True)
 
     # Agregar filtro por estado si se especifica
     if filter_state:
         avc09_list = avc09_list.filter(state=filter_state)
+
+    # Agregar filtro por rango de fechas
+    if from_date:
+        avc09_list = avc09_list.filter(from_date__gte=from_date)
+    if to_date:
+        avc09_list = avc09_list.filter(to_date__lte=to_date)
 
     avc09_list = avc09_list.select_related(
         "personnel", "personnel__grade", "hospital"

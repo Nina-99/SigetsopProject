@@ -148,7 +148,7 @@ export const UsersService = {
     return api.post("/users/", data);
   },
   update(id: number, data: any) {
-    return api.put(`/users/${id}/`, data);
+    return api.patch(`/users/${id}/`, data);
   },
   delete(id: number) {
     return api.delete(`/users/${id}/`);
@@ -161,6 +161,9 @@ export const UsersService = {
   },
   exportAllJSON(params?: any) {
     return api.get("/users/export/all/", { params });
+  },
+  listRole() {
+    return api.get("/roles/");
   },
 };
 

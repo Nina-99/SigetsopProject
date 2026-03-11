@@ -64,7 +64,8 @@ class ConsumeMobileTokenView(APIView):
                 "detail": "Token válido",
                 "user_id": token.user.id,
                 "username": token.user.username,
-                "auth_token": str(refresh.access_token),
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
             }
         )
 

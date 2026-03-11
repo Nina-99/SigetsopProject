@@ -1,4 +1,5 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext } from "react";
+import { AuthTokenResponse } from "../services/auth";
 
 interface Role {
   id: number;
@@ -20,7 +21,7 @@ interface UserData {
 export interface AuthContextType {
   token: string | null;
   user: UserData | null;
-  login: (token: string) => void;
+  login: (tokens: AuthTokenResponse) => void;
   logout: () => void;
 }
 

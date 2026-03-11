@@ -45,9 +45,21 @@ class SickLeaveViewSet(viewsets.ModelViewSet):
         )
 
     def get_queryset(self):
-        if self.request.query_params.get("show_deleted") == "true":
-            return SickLeave.objects.all()
-        return SickLeave.objects.filter(deleted_at__isnull=True)
+        show_deleted = self.request.query_params.get("show_deleted") == "true"
+        from_date = self.request.query_params.get("from_date")
+        to_date = self.request.query_params.get("to_date")
+
+        if show_deleted:
+            queryset = SickLeave.objects.all()
+        else:
+            queryset = SickLeave.objects.filter(deleted_at__isnull=True)
+
+        if from_date:
+            queryset = queryset.filter(start_date__gte=from_date)
+        if to_date:
+            queryset = queryset.filter(start_date__lte=to_date)
+
+        return queryset
 
 
 # Endpoints de exportación

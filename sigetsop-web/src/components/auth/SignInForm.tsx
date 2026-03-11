@@ -47,8 +47,7 @@ export default function SignInForm() {
         // Cerrar loading
         closeSwal();
         
-        // Guardar token y datos de usuario
-        localStorage.setItem("token", JSON.stringify(response));
+        // Guardar token y datos de usuario (Login maneja localStorage internamente)
         login(response);
         
         // Decodificar token para obtener datos del usuario
