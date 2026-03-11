@@ -10,7 +10,7 @@ Este proyecto está configurado para un despliegue rápido y seguro utilizando *
 - **Backend (API/WebSockets)**: Gestionado por Daphne internamente.
 - **Base de Datos**: PostgreSQL 16.
 - **Cache/WebSockets**: Redis 7.
-- **IP Servidor**: `200.110.50.35`
+- **IP Producción**: `200.110.50.35`
 
 ---
 
