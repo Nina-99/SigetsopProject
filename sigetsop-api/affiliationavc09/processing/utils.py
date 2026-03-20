@@ -68,7 +68,7 @@ def find_initial_points(pil_img):
 
     if area_ratio < 0.3:
         print(
-            f"El cuadrado detectado es muy pequeño ({area_ratio*100:.2f}% del área total)."
+            f"El cuadrado detectado es muy pequeño ({area_ratio * 100:.2f}% del área total)."
         )
         margin_x = int(width * 0.1)
         margin_y = int(height * 0.1)
@@ -176,60 +176,59 @@ def remove_signature(img):
     return mask
 
 
-def correct_img(pil_img, points, image_size, display_size):
+def correct_img(pil_img, points, image_size, display_size, rotation=0):
     img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
 
-    scale_x = image_size["width"] / display_size["width"]
-    scale_y = image_size["height"] / display_size["height"]
+    # 🔹 1. Rotar la imagen físicamente para que coincida con lo que el usuario ve
+    if rotation == 90:
+        img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+    elif rotation == 180:
+        img = cv2.rotate(img, cv2.ROTATE_180)
+    elif rotation == 270:
+        img = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
-    # 🔹 Escalar puntos
+    # Dimensiones de la imagen ya rotada
+    h_orig, w_orig = img.shape[:2]
+
+    # 🔹 2. Escalar los puntos basados en el canvas visual (display_size)
+    # display_size en el frontend ya contempla la rotación (intercambia W y H)
+    scale_x = w_orig / display_size["width"]
+    scale_y = h_orig / display_size["height"]
+
     if isinstance(points[0], dict):
-        points = np.array(
+        pts = np.array(
             [[p["x"] * scale_x, p["y"] * scale_y] for p in points], dtype="float32"
         )
     else:
-        points = np.array(
+        pts = np.array(
             [[p[0] * scale_x, p[1] * scale_y] for p in points], dtype="float32"
         )
 
-    pts = np.array(points, dtype="float32")
-    # Ordenar puntos si vienen desordenados
-    if pts.shape != (4, 2):
-        raise ValueError("Los puntos deben tener forma (4,2)")
+    # Ordenar puntos: Superior Izquierda, Superior Derecha, Inferior Derecha, Inferior Izquierda
     pts = order_points(pts)
 
-    # 7. Calcular las dimensiones de la imagen de destino (anchura y altura máximas)
-    # Calcular la anchura máxima (distancia entre superior derecha y superior izquierda, y entre inferior derecha e inferior izquierda)
+    # 🔹 3. Calcular dimensiones reales del recorte (sin aplastar)
     widthA = np.sqrt(((pts[2][0] - pts[3][0]) ** 2) + ((pts[2][1] - pts[3][1]) ** 2))
     widthB = np.sqrt(((pts[1][0] - pts[0][0]) ** 2) + ((pts[1][1] - pts[0][1]) ** 2))
     maxWidth = max(int(widthA), int(widthB))
 
-    # Calcular la altura máxima (distancia entre superior derecha e inferior derecha, y entre superior izquierda e inferior izquierda)
     heightA = np.sqrt(((pts[1][0] - pts[2][0]) ** 2) + ((pts[1][1] - pts[2][1]) ** 2))
     heightB = np.sqrt(((pts[0][0] - pts[3][0]) ** 2) + ((pts[0][1] - pts[3][1]) ** 2))
     maxHeight = max(int(heightA), int(heightB))
 
-    # Definir los puntos de destino (la imagen 'vista desde arriba' y recortada)
     dst = np.array(
         [
-            [0, 0],  # Superior Izquierda
-            [maxWidth - 1, 0],  # Superior Derecha
-            [maxWidth - 1, maxHeight - 1],  # Inferior Derecha
+            [0, 0],
+            [maxWidth - 1, 0],
+            [maxWidth - 1, maxHeight - 1],
             [0, maxHeight - 1],
-        ],  # Inferior Izquierda
+        ],
         dtype="float32",
     )
 
-    # 8. Obtener la matriz de transformación de perspectiva
+    # 🔹 4. Transformación de Perspectiva
     M = cv2.getPerspectiveTransform(pts, dst)
-
-    # 9. Aplicar la transformación de perspectiva
     warped = cv2.warpPerspective(img, M, (maxWidth, maxHeight))
 
-    # Opcional: convertir a escala de grises y aplicar umbral para un look de "escaneo"
-    warped = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
-    warped = resize_image(warped, 1000, 600)
-    if warped is None:
-        return None
-
+    # IMPORTANTE: Devolvemos en color y sin resize forzado para que el OCR sea preciso.
     return warped

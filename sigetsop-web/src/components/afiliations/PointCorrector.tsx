@@ -23,30 +23,38 @@ const PointCorrector: React.FC<Props> = ({
   const navigate = useNavigate();
   const { token } = useAuth();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const magnifierCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
 
   const [points, setPoints] = useState<Point[]>([]);
+  const [rotation, setRotation] = useState(0);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [displaySize, setDisplaySize] = useState({ width: 0, height: 0 });
 
-  //NOTE:  Cargar imagen
+  //NOTE: Cargar imagen y ajustar tamaño responsivo
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const imge = e.currentTarget;
     const img = imgRef.current;
     const canvas = canvasRef.current;
-    setImageSize({ width: imge.naturalWidth, height: imge.naturalHeight });
-    setDisplaySize({ width: imge.width, height: imge.height });
     if (!img || !canvas) return;
 
-    const maxWidth = 800;
-    const scaleFactor = img.width > maxWidth ? maxWidth / img.width : 1;
-    setScale(scaleFactor);
+    setImageSize({ width: imge.naturalWidth, height: imge.naturalHeight });
 
-    canvas.width = img.width * scaleFactor;
-    canvas.height = img.height * scaleFactor;
+    // Calculamos un ancho máximo dinámico basado en el ancho de la pantalla (95%)
+    const screenPadding = 40;
+    const dynamicMaxWidth = Math.min(800, window.innerWidth - screenPadding);
+
+    const scaleFactor = imge.naturalWidth > dynamicMaxWidth ? dynamicMaxWidth / imge.naturalWidth : 1;
+    setScale(scaleFactor);
+    setRotation(0);
+
+    canvas.width = imge.naturalWidth * scaleFactor;
+    canvas.height = imge.naturalHeight * scaleFactor;
+    
+    setDisplaySize({ width: canvas.width, height: canvas.height });
 
     const scaledPoints = initialPoints.map((p) => ({
       x: p.x * scaleFactor,
@@ -65,15 +73,61 @@ const PointCorrector: React.FC<Props> = ({
     if (!ctx) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  }, [points]);
+
+    ctx.save();
+    // Aplicar rotación
+    if (rotation === 90) {
+      ctx.translate(canvas.width, 0);
+      ctx.rotate((90 * Math.PI) / 180);
+    } else if (rotation === 180) {
+      ctx.translate(canvas.width, canvas.height);
+      ctx.rotate((180 * Math.PI) / 180);
+    } else if (rotation === 270) {
+      ctx.translate(0, canvas.height);
+      ctx.rotate((270 * Math.PI) / 180);
+    }
+
+    // Dibujar la imagen. Si es 90 o 270, las dimensiones se intercambian en el drawImage
+    if (rotation === 90 || rotation === 270) {
+      ctx.drawImage(img, 0, 0, canvas.height, canvas.width);
+    } else {
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    }
+    ctx.restore();
+  }, [points, rotation]);
 
   //NOTE: Función de transformación de perspectiva (divide en dos triángulos)
-  const getWarpedPreview = (): string | null => {
+  const getWarpedPreview = (highRes = false): string | null => {
     const img = imgRef.current;
     if (!img || points.length < 4) return null;
 
-    const [tl, tr, br, bl] = points;
+    // Usar escala real si es highRes
+    const currentScale = highRes ? 1 : scale;
+
+    // Normalizar puntos: traducirlos de vuelta al espacio de la imagen original (sin rotación)
+    // Pero si es para previsualización (no highRes), se quedan en el espacio visual
+    const normalizedPoints = points.map((p) => {
+      let nx = p.x / scale; // Ir siempre a coordenadas naturales primero
+      let ny = p.y / scale;
+
+      if (rotation === 90) {
+        const tmp = nx;
+        nx = ny;
+        ny = img.height - tmp;
+      } else if (rotation === 180) {
+        nx = img.width - nx;
+        ny = img.height - ny;
+      } else if (rotation === 270) {
+        const tmp = nx;
+        nx = img.width - ny;
+        ny = tmp;
+      }
+
+      // Ahora aplicar la escala de salida deseada
+      return { x: nx * currentScale, y: ny * currentScale };
+    });
+
+    const [tl, tr, br, bl] = normalizedPoints;
     const width = Math.max(
       Math.hypot(tr.x - tl.x, tr.y - tl.y),
       Math.hypot(br.x - bl.x, br.y - bl.y),
@@ -127,7 +181,7 @@ const PointCorrector: React.FC<Props> = ({
         det;
 
       ctx.setTransform(a, d, b, e, c, f);
-      ctx.drawImage(img, 0, 0, img.width * scale, img.height * scale);
+      ctx.drawImage(img, 0, 0, img.width * currentScale, img.height * currentScale);
       ctx.restore();
     };
 
@@ -155,26 +209,78 @@ const PointCorrector: React.FC<Props> = ({
   //NOTE: Actualiza vista previa en tiempo real
   useEffect(() => {
     if (points.length === 4) {
-      const warped = getWarpedPreview();
+      const warped = getWarpedPreview(false);
       if (warped) setPreviewUrl(warped);
     }
-  }, [points]);
+  }, [points, rotation]);
 
-  //NOTE: Control del arrastre (mouse/touch)
+  //NOTE: Lupa de Precisión para móviles y desktop
+  useEffect(() => {
+    if (draggingIndex !== null && canvasRef.current && magnifierCanvasRef.current) {
+      const mainCanvas = canvasRef.current;
+      const magCanvas = magnifierCanvasRef.current;
+      const mctx = magCanvas.getContext("2d");
+      if (mctx) {
+        const p = points[draggingIndex];
+        const size = 60; // Área de captura del canvas original
+        mctx.imageSmoothingEnabled = false; // Zoom nítido sin suavizado
+        mctx.clearRect(0, 0, magCanvas.width, magCanvas.height);
+        
+        // Dibujar el contenido del canvas principal ampliado
+        mctx.drawImage(
+          mainCanvas,
+          p.x - size / 2, p.y - size / 2, size, size, // Origen
+          0, 0, magCanvas.width, magCanvas.height      // Destino (120x120)
+        );
+        
+        // Cruz de precisión roja
+        mctx.strokeStyle = "#ff0000";
+        mctx.lineWidth = 2;
+        mctx.beginPath();
+        mctx.moveTo(magCanvas.width / 2, 0); mctx.lineTo(magCanvas.width / 2, magCanvas.height);
+        mctx.moveTo(0, magCanvas.height / 2); mctx.lineTo(magCanvas.width, magCanvas.height / 2);
+        mctx.stroke();
+      }
+    }
+  }, [points, draggingIndex]);
+
+  //NOTE: Control del arrastre con corrección de escala visual para PC y Móvil
   const getPointerPos = (clientX: number, clientY: number) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
-    return { x: clientX - rect.left, y: clientY - rect.top };
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    
+    const rect = canvas.getBoundingClientRect();
+    
+    // Proporción entre el tamaño interno del canvas (pixels) y el tamaño visual en el DOM
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    return { 
+      x: (clientX - rect.left) * scaleX, 
+      y: (clientY - rect.top) * scaleY 
+    };
   };
 
   const startDrag = (x: number, y: number) => {
-    const hit = points.findIndex((p) => Math.hypot(p.x - x, p.y - y) < 12);
-    if (hit !== -1) setDraggingIndex(hit);
+    // Aumentamos el hitbox a 30px para mayor facilidad en móviles
+    const hit = points.findIndex((p) => Math.hypot(p.x - x, p.y - y) < 30);
+    if (hit !== -1) {
+      setDraggingIndex(hit);
+      // Pequeña vibración táctil al seleccionar el punto
+      if ("vibrate" in navigator) navigator.vibrate(20);
+    }
   };
 
   const moveDrag = (x: number, y: number) => {
-    if (draggingIndex === null) return;
+    if (draggingIndex === null || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+
+    // Restringir puntos dentro de los límites del canvas (Clamping)
+    const clampedX = Math.max(0, Math.min(x, canvas.width));
+    const clampedY = Math.max(0, Math.min(y, canvas.height));
+
     const newPts = [...points];
-    newPts[draggingIndex] = { x, y };
+    newPts[draggingIndex] = { x: clampedX, y: clampedY };
     setPoints(newPts);
   };
 
@@ -189,18 +295,83 @@ const PointCorrector: React.FC<Props> = ({
     moveDrag(x, y);
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    const { x, y } = getPointerPos(touch.clientX, touch.clientY);
-    startDrag(x, y);
+  // Manejo de eventos táctiles nativos para evitar el error de "passive event listener"
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleTouchStartNative = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      const { x, y } = getPointerPos(touch.clientX, touch.clientY);
+      startDrag(x, y);
+    };
+
+    const handleTouchMoveNative = (e: TouchEvent) => {
+      // Solo prevenimos el scroll si estamos arrastrando un punto
+      if (draggingIndex !== null) {
+        if (e.cancelable) e.preventDefault();
+      }
+      const touch = e.touches[0];
+      const { x, y } = getPointerPos(touch.clientX, touch.clientY);
+      moveDrag(x, y);
+    };
+
+    canvas.addEventListener("touchstart", handleTouchStartNative, {
+      passive: false,
+    });
+    canvas.addEventListener("touchmove", handleTouchMoveNative, {
+      passive: false,
+    });
+
+    return () => {
+      canvas.removeEventListener("touchstart", handleTouchStartNative);
+      canvas.removeEventListener("touchmove", handleTouchMoveNative);
+    };
+  }, [points, draggingIndex]);
+
+
+
+  const handleRotate = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const oldW = canvas.width;
+    const oldH = canvas.height;
+
+    // Intercambiar dimensiones del canvas (viewport)
+    const newW = oldH;
+    const newH = oldW;
+    canvas.width = newW;
+    canvas.height = newH;
+
+    // Mantener los puntos fijos en la pantalla, pero asegurar que estén dentro de los nuevos límites
+    const clampedPoints = points.map((p) => ({
+      x: Math.min(Math.max(p.x, 0), newW),
+      y: Math.min(Math.max(p.y, 0), newH),
+    }));
+
+    setPoints(clampedPoints);
+    setDisplaySize({ width: newW, height: newH });
+    setRotation((prev) => (prev + 90) % 360);
   };
-  const handleTouchMove = (e: React.TouchEvent) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const { x, y } = getPointerPos(touch.clientX, touch.clientY);
-    moveDrag(x, y);
+
+  const handleResetPoints = () => {
+    setRotation(0);
+    const img = imgRef.current;
+    const canvas = canvasRef.current;
+    if (img && canvas) {
+      const scaleFactor = img.width > 800 ? 800 / img.width : 1;
+      canvas.width = img.width * scaleFactor;
+      canvas.height = img.height * scaleFactor;
+      const scaledPoints = initialPoints.map((p) => ({
+        x: p.x * scaleFactor,
+        y: p.y * scaleFactor,
+      }));
+      setPoints(scaledPoints);
+    } else {
+      setPoints(initialPoints);
+    }
   };
-  const handleResetPoints = () => setPoints(initialPoints);
   // const handleConfirm = () => onProcess(points);
   const handleConfirm = async (finalPoints: Point[]) => {
     if (!token) {
@@ -213,10 +384,8 @@ const PointCorrector: React.FC<Props> = ({
     }
 
     try {
-      const realPoints = finalPoints.map((p) => ({
-        x: p.x / scale,
-        y: p.y / scale,
-      }));
+      const warpedBase64 = getWarpedPreview(true); // Generar recorte en alta resolución
+      
       const res = await fetch(`${import.meta.env.VITE_API_URL}/process/`, {
         method: "POST",
         headers: {
@@ -224,9 +393,8 @@ const PointCorrector: React.FC<Props> = ({
         },
         body: JSON.stringify({
           image_url: imageUrl,
-          points: realPoints,
-          imageSize,
-          displaySize,
+          warped_image: warpedBase64, // Enviamos el documento ya recortado y rotado
+          rotation,
         }),
       });
 
@@ -313,12 +481,15 @@ const PointCorrector: React.FC<Props> = ({
           onMouseMove={handleMouseMove}
           onMouseUp={stopDrag}
           onMouseLeave={stopDrag}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
           onTouchEnd={stopDrag}
           style={{
             cursor: draggingIndex !== null ? "grabbing" : "grab",
             touchAction: "none",
+            maxWidth: "100%", // Prevenir desbordamiento en móviles
+            height: "auto",
+            display: "inline-block",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+            borderRadius: "8px"
           }}
         />
 
@@ -346,12 +517,42 @@ const PointCorrector: React.FC<Props> = ({
         </motion.svg>
 
         <AnimatePresence>
+          {draggingIndex !== null && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.5, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.5, y: 20 }}
+              style={{
+                position: "absolute",
+                // Posicionamos la lupa arriba del punto para evitar que el dedo la tape
+                left: points[draggingIndex].x - 60,
+                top: points[draggingIndex].y - 150,
+                width: 120,
+                height: 120,
+                borderRadius: "50%",
+                border: "4px solid white",
+                backgroundColor: "#222",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.6)",
+                overflow: "hidden",
+                zIndex: 100,
+                pointerEvents: "none",
+              }}
+            >
+              <canvas
+                ref={magnifierCanvasRef}
+                width={120}
+                height={120}
+                style={{ width: "100%", height: "100%" }}
+              />
+            </motion.div>
+          )}
           {points.map((p, i) => (
             <motion.div
               key={i}
               initial={{ scale: 0 }}
               animate={{
-                scale: draggingIndex === i ? 0.4 : 0.8,
+                // El punto crece al arrastrar para ser visible por fuera del dedo
+                scale: draggingIndex === i ? 1.4 : 0.8,
                 x: p.x - 10,
                 y: p.y - 10,
               }}
@@ -363,10 +564,13 @@ const PointCorrector: React.FC<Props> = ({
                 height: 20,
                 borderRadius: "50%",
                 backgroundColor: i === draggingIndex ? "#ff0000" : "#00ff00",
-                border: "2px solid black",
+                border: "2px solid white",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
                 top: 0,
                 left: 0,
                 pointerEvents: "none",
+                // El punto activo siempre está por encima de los demás
+                zIndex: i === draggingIndex ? 50 : 10,
               }}
             />
           ))}
@@ -392,6 +596,34 @@ const PointCorrector: React.FC<Props> = ({
           }}
         >
           ✅ Confirmar
+        </button>
+        <button
+          onClick={handleRotate}
+          style={{
+            background: "#fd7e14",
+            color: "white",
+            padding: "10px 16px",
+            borderRadius: "6px",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+            <path d="M21 3v5h-5" />
+          </svg>
+          Rotar 90°
         </button>
         <button
           onClick={handleResetPoints}

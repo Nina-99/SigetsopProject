@@ -58,6 +58,7 @@ services:
       DJANGO_CORS_ALLOWED_ORIGINS: "http://localhost:6090,http://127.0.0.1:6090,http://200.110.50.35:6090"
       DJANGO_CSRF_TRUSTED_ORIGINS: "http://localhost:6090,http://127.0.0.1:6090,http://200.110.50.35:6090"
     volumes:
+      - ./sigetsop-api:/app
       - ./sigetsop-api/media:/app/media
       - ./sigetsop-api/static:/app/static
       - ./sigetsop-api/temp_uploads:/app/temp_uploads

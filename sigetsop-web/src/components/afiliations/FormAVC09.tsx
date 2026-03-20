@@ -100,19 +100,40 @@ const FormAVC09: React.FC = () => {
     field: keyof IncapacityData,
   ) => {
     const { value } = event.target;
+    const upperValue = value.toUpperCase();
 
     setFormData((prev) => {
-      if (!prev) {
-        return null;
-      }
+      if (!prev) return null;
 
       const newFormData: IncapacityData = {
         ...prev,
-        [field]: value.toUpperCase(),
-      } as IncapacityData;
+        [field]: upperValue,
+      };
+
+      const fromStr = newFormData.FromDate.trim();
+      const toStr = newFormData.ToDate.trim();
+
+      const isFromValid = isValidDate(fromStr, "DMY");
+      const isToValid = isValidDate(toStr, "DMY");
+
+      if (isFromValid && isToValid) {
+        const [d1, m1, y1] = fromStr.split("-").map(Number);
+        const [d2, m2, y2] = toStr.split("-").map(Number);
+
+        // Usar UTC para garantizar cálculos exactos sin desfases por zona horaria
+        const start = Date.UTC(y1, m1 - 1, d1);
+        const end = Date.UTC(y2, m2 - 1, d2);
+
+        if (end >= start) {
+          const diffDays =
+            Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+          newFormData.DaysIncapacity = diffDays.toString();
+        } else {
+          newFormData.DaysIncapacity = "";
+        }
+      }
 
       localStorage.setItem("avc09_data", JSON.stringify(newFormData));
-
       return newFormData;
     });
   };

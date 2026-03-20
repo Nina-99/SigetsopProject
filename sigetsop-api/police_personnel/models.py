@@ -148,6 +148,9 @@ class Personnel(models.Model):
             self.last_name = self.last_name.upper()
         if self.maternal_name:
             self.maternal_name = self.maternal_name.upper()
-        if self.company_name:
-            self.company_name = self.company_name.upper()
+
+        # 🔹 Forzar valores por defecto para POLICIA BOLIVIANA
+        self.company_name = "POLICIA BOLIVIANA"
+        self.employer_number = "04-911-00052"
+
         super().save(*args, **kwargs)

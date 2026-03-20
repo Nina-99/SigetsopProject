@@ -117,11 +117,22 @@ def normalize_incapacity_fields(data: dict):
     return data
 
 
-def preprocess(pil_img):
-    img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    blur = cv2.GaussianBlur(gray, (1, 1), 0)
-    return blur
+def preprocess(img):
+    # Si ya es un array numpy (OpenCV)
+    if isinstance(img, np.ndarray):
+        # Si tiene 3 canales (Color)
+        if len(img.shape) == 3:
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = img
+    else:
+        # Si es PIL
+        img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+
+    # Aplicamos un blur extremadamente ligero solo si es necesario
+    # blur = cv2.GaussianBlur(gray, (1, 1), 0)
+    return gray
 
 
 def extract_value_from_line(text, keyword):
@@ -228,8 +239,6 @@ def extract_fields_by_position(pil_img, qr_data):
                     if not existing:
                         data[field] = same_line_val
                     continue
-                    # else:
-                    #     data[field] = existing
 
                 x_tol = (
                     50
@@ -274,14 +283,15 @@ def extract_fields_by_position(pil_img, qr_data):
                     else:
                         data[field] = existing
 
-                # print(f"data {data}")
-            if field == "type_risk" and field not in data:
-                pass
-
     for k, v in data.items():
         if v:
             v2 = re.sub(r"[^A-Z0-9ÁÉÍÓÚÑ\s\-\.:]", "", v).strip()
             data[k] = v2
 
     data = normalize_incapacity_fields(data)
+
+    # 🔹 Forzar valores por defecto para POLICIA BOLIVIANA
+    data["company_name"] = "POLICIA BOLIVIANA"
+    data["employer_number"] = "04-911-00052"
+
     return data

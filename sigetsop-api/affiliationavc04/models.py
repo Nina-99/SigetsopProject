@@ -100,3 +100,9 @@ class AffiliationAVC04(models.Model):
 
     def __str__(self):
         return f"Documento de {self.last_name or 'Pendiente'} - ID: {self.id}"
+
+    def save(self, *args, **kwargs):
+        # 🔹 Forzar valores por defecto para POLICIA BOLIVIANA
+        self.company_name = "POLICIA BOLIVIANA"
+        self.employer_number = "04-911-00052"
+        super().save(*args, **kwargs)

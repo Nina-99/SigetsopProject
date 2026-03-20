@@ -11,14 +11,21 @@ class IsAdminOrAuxiliarSIT(permissions.BasePermission):
             return False
 
         user = request.user
-        # Check if user has a role and if it's Admin or AuxiliarSIT
+
+        # Superusuarios tienen acceso total
+        if user.is_superuser:
+            return True
+
+        # Verificar roles permitidos
         if hasattr(user, "role") and user.role:
             role_name = (
                 user.role.name.lower()
                 if hasattr(user.role, "name")
                 else str(user.role).lower()
             )
-            return role_name in ["admin", "auxiliarsit"]
+            # Incluimos 'auxiliar' en la lista permitida
+            return role_name in ["admin", "auxiliarsit", "auxiliar"]
+
         return False
 
 

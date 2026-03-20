@@ -41,9 +41,17 @@ api.interceptors.response.use(
       switch (error.response?.status) {
         case 400:
           // Error de validación
-          const detail = error.response.data?.detail;
-          if (detail) {
-            throw new Error(detail);
+          const data = error.response.data;
+          if (data?.detail) {
+            throw new Error(data.detail);
+          }
+          // Si es un objeto de errores por campo (Django DRF style)
+          if (typeof data === "object" && data !== null) {
+            const firstKey = Object.keys(data)[0];
+            const firstError = data[firstKey];
+            const errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+            // Retornamos el campo y el mensaje para que sea claro (ej: "email: Este campo es obligatorio")
+            throw new Error(`${firstKey}: ${errorMessage}`);
           }
           throw new Error("Datos inválidos. Por favor verifica la información.");
 

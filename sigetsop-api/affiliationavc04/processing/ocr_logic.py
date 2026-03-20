@@ -284,4 +284,9 @@ def extract_fields_by_position(pil_img, qr_data):
             data[k] = v2
 
     data = normalize_incapacity_fields(data)
+
+    # 🔹 Forzar valores por defecto para POLICIA BOLIVIANA
+    data["company_name"] = "POLICIA BOLIVIANA"
+    data["employer_number"] = "04-911-00052"
+
     return data

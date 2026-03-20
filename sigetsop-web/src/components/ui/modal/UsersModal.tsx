@@ -9,6 +9,8 @@ import {
 } from "./ModalComponents";
 import { Input, Select } from "../../form";
 import { Users, UsersService } from "../../../services/auth";
+import { showValidationError } from "../../../utils/swalMessages";
+import { EyeIcon, EyeCloseIcon } from "../../../icons";
 
 interface UsersModalProps {
   isOpen: boolean;
@@ -22,6 +24,7 @@ type UsersState = {
   lastName: string;
   maternalName: string;
   username: string;
+  password?: string;
   phone: string;
   email: string;
   roleId: number | string;
@@ -32,6 +35,7 @@ const initialState: UsersState = {
   lastName: "",
   maternalName: "",
   username: "",
+  password: "",
   phone: "",
   email: "",
   roleId: "",
@@ -66,6 +70,7 @@ export default function UsersModal({
     { value: number | string; label: string }[]
   >([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const isEditing = usersToEdit !== null;
   const title = isEditing
@@ -147,12 +152,19 @@ export default function UsersModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (
-      !usersState.lastName.trim() ||
-      !usersState.firstName.trim() ||
-      !usersState.roleId
-    ) {
-      alert("Los campos Nombre, Apellido Paterno y Rol son obligatorios.");
+    const missingFields = [];
+    if (!usersState.lastName.trim()) missingFields.push("Apellido Paterno");
+    if (!usersState.firstName.trim()) missingFields.push("Nombre");
+    if (!usersState.username.trim()) missingFields.push("Username");
+    if (!usersState.email.trim()) missingFields.push("Email");
+    if (!usersState.roleId) missingFields.push("Rol");
+    if (!isEditing && !usersState.password?.trim())
+      missingFields.push("Contraseña");
+
+    if (missingFields.length > 0) {
+      showValidationError(
+        `Los siguientes campos son obligatorios: ${missingFields.join(", ")}`,
+      );
       return;
     }
 
@@ -177,6 +189,7 @@ export default function UsersModal({
           last_name: usersState.lastName.trim(),
           maternal_name: usersState.maternalName.trim(),
           username: usersState.username.trim(),
+          password: usersState.password?.trim(),
           phone: usersState.phone.trim(),
           email: usersState.email.trim(),
           role: roleForPayload,
@@ -264,7 +277,9 @@ export default function UsersModal({
                       disabled={isEditing}
                     />
                   </div>
+                </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium">
                       Primer Nombre *
@@ -279,21 +294,7 @@ export default function UsersModal({
 
                   <div>
                     <label className="block text-sm font-medium">
-                      Correo Electrónico
-                    </label>
-                    <Input
-                      type="text"
-                      value={usersState.email}
-                      onChange={handleChange("email")}
-                      disabled={isEditing}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium">
-                      Username
+                      Username *
                     </label>
                     <Input
                       type="text"
@@ -302,7 +303,9 @@ export default function UsersModal({
                       disabled={isEditing}
                     />
                   </div>
+                </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium">Celular</label>
                     <Input
@@ -322,7 +325,49 @@ export default function UsersModal({
                     />
                   </div>
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium">
+                      Correo Electrónico *
+                    </label>
+                    <Input
+                      type="email"
+                      value={usersState.email}
+                      onChange={handleChange("email")}
+                      disabled={isEditing}
+                    />
+                  </div>
+
+                  {!isEditing && (
+                    <div className="relative">
+                      <label className="block text-sm font-medium">
+                        Contraseña *
+                      </label>
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          value={usersState.password}
+                          onChange={handleChange("password")}
+                          className="pr-12"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-gray-500 hover:text-brand-500 transition"
+                        >
+                          {showPassword ? (
+                            <EyeCloseIcon className="size-5" />
+                          ) : (
+                            <EyeIcon className="size-5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </fieldset>
+
 
               <div className="pt-2 border-t">
                 <p className="text-xs text-gray-400">

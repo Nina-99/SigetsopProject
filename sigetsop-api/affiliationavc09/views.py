@@ -6,6 +6,7 @@
 import datetime
 import os
 import uuid
+import cv2
 from django.utils import timezone
 from django.conf import settings
 from django.db.models import Count
@@ -156,48 +157,90 @@ class UploadAndProcessView(views.APIView):
         )
 
 
+import base64
+from io import BytesIO
+
+
 class CorrectAndOcrView(views.APIView):
     def post(self, request):
         image_url = request.data.get("image_url")
+        warped_image_b64 = request.data.get("warped_image")
         points = request.data.get("points")
         imageSize = request.data.get("imageSize")
         displaySize = request.data.get("displaySize")
+        rotation = request.data.get("rotation", 0)
 
-        if not image_url or not points:
+        if not image_url and not warped_image_b64:
             return Response(
                 {"error": "Faltan parámetros"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Obtener ruta
-        if image_url.startswith(request.build_absolute_uri(settings.MEDIA_URL)):
-            filename = image_url.split(settings.MEDIA_URL)[-1]
-            file_path = os.path.join(settings.MEDIA_ROOT, filename)
-        else:
-            return Response(
-                {"error": "URL no válida"}, status=status.HTTP_400_BAD_REQUEST
-            )
+        warped_img = None
 
-        pil_img = Image.open(file_path).convert("RGB")
+        # 🔹 Caso 1: Recibimos la imagen ya procesada (recortada y rotada) desde el frontend
+        if warped_image_b64:
+            try:
+                if "," in warped_image_b64:
+                    warped_image_b64 = warped_image_b64.split(",")[1]
+                img_data = base64.b64decode(warped_image_b64)
+                warped_img = cv2.imdecode(
+                    np.frombuffer(img_data, np.uint8), cv2.IMREAD_COLOR
+                )
+            except Exception as e:
+                print(f"Error decodificando warped_image: {e}")
 
-        # Aplicar corrección de perspectiva
-        try:
-            points = [[float(p["x"]), float(p["y"])] for p in points]
-        except Exception as e:
-            return Response(
-                {"error": f"Formato de puntos inválido: {str(e)}"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        warped_img = correct_img(
-            pil_img, np.array(points, dtype="float32"), imageSize, displaySize
-        )
+        # 🔹 Caso 2: Recibimos puntos y debemos procesar en el servidor (Fallback)
+        if warped_img is None and image_url and points:
+            # Obtener ruta
+            if image_url.startswith(request.build_absolute_uri(settings.MEDIA_URL)):
+                filename = image_url.split(settings.MEDIA_URL)[-1]
+                file_path = os.path.join(settings.MEDIA_ROOT, filename)
+            else:
+                return Response(
+                    {"error": "URL no válida"}, status=status.HTTP_400_BAD_REQUEST
+                )
+
+            pil_img = Image.open(file_path).convert("RGB")
+
+            # Aplicar corrección de perspectiva
+            try:
+                points = [[float(p["x"]), float(p["y"])] for p in points]
+                warped_img = correct_img(
+                    pil_img,
+                    np.array(points, dtype="float32"),
+                    imageSize,
+                    displaySize,
+                    rotation,
+                )
+            except Exception as e:
+                return Response(
+                    {"error": f"Error procesando puntos: {str(e)}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         if warped_img is None:
             return Response(
-                {"error": "No se pudo corregir la imagen"},
+                {"error": "No se pudo obtener la imagen procesada"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Ejecutar OCR
-        qr_data = read_qr_from_image(pil_img)
+        # 🔹 Estandarizar resolución para que las tolerancias de ocr_logic (píxeles fijos) funcionen
+        # Forzamos un ancho de 1000px manteniendo la proporción
+        target_w = 1000
+        h, w = warped_img.shape[:2]
+        if w != target_w:
+            aspect_ratio = h / w
+            target_h = int(target_w * aspect_ratio)
+            warped_img = cv2.resize(
+                warped_img, (target_w, target_h), interpolation=cv2.INTER_LANCZOS4
+            )
+
+        # Ejecutar OCR y QR
+        # Para el QR usamos la imagen corregida si es posible
+        qr_data = read_qr_from_image(warped_img)
+        if qr_data is None:
+            qr_data = {}
+
         future = executor.submit(extract_fields_by_position, warped_img, qr_data)
         data = future.result()
 

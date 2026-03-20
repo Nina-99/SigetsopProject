@@ -3,6 +3,7 @@
 # Copyrigtht (C) 2025 marconina999@gmail.com. All rights reserveds.
 # Unauthorized copyng or distribution prohibited.
 #
+import cv2
 import numpy as np
 from PIL.Image import Image
 from qreader import QReader
@@ -19,8 +20,8 @@ def read_qr_from_image(pil_image: Image):
             "first_name": None,
             "middle_name": None,
             "insured_number": None,
-            "employer_number": None,
-            "company_name": None,
+            "employer_number": "04-911-00052",
+            "company_name": "POLICIA BOLIVIANA",
             "from_date": None,
             "to_date": None,
             "type_risk": None,
@@ -50,12 +51,17 @@ def read_qr_from_image(pil_image: Image):
         # 3. Parsear los datos
         # "09209|12323ABC|273623|Juan Perez|Razón Social S.R.L.|Dr. Apellido|2025-01-01"
         campos = qr_string.split("|")
+        if len(campos) < 6:
+            return payload
+
         campo = campos[2].strip().split(" ")
         campoMat = campos[5].strip().split(" ")
+
         first_name = None
         middle_name = None
         last_name = None
         maternal_name = None
+
         if len(campo) <= 2:
             first_name = campo[0]
             last_name = campo[1]
@@ -69,29 +75,28 @@ def read_qr_from_image(pil_image: Image):
             last_name = campo[2]
             maternal_name = campo[3]
 
-        matricula = campoMat[0]
+        matricula = campoMat[0] if campoMat else None
         # Rellenar con None si faltan campos para evitar IndexError
-        campos.extend([None] * (7 - len(campos)))
+        campos_ext = campos + [None] * (7 - len(campos))
 
         payload = {
-            "code": campos[0].strip() if campos[0] else None,
+            "code": campos_ext[0].strip() if campos_ext[0] else None,
             "last_name": last_name,
             "maternal_name": maternal_name,
             "first_name": first_name,
             "middle_name": middle_name,
-            "insured_number": campos[1].strip() if campos[1] else None,
-            "employer_number": (campos[3].strip() if campos[3] else None),
-            "company_name": campos[4].strip() if campos[4] else None,
+            "insured_number": campos_ext[1].strip() if campos_ext[1] else None,
+            "employer_number": "04-911-00052",
+            "company_name": "POLICIA BOLIVIANA",
             "from_date": None,
             "to_date": None,
             "type_risk": None,
             "matricula": matricula,
-            "isue_date": (campos[6].strip() if campos[6] else None),
+            "isue_date": (campos_ext[6].strip() if campos_ext[6] else None),
             "days_incapacity": None,
             "hospital": None,
         }
 
-        # print(f"INFO: Datos QR parseados: {payload}")
         return payload
 
     except Exception as e:

@@ -100,12 +100,39 @@ const AVC09MobileUpload: React.FC = () => {
       if (res.status === 200) {
         setMessage("✅ ¡Archivo enviado con éxito! Revisa tu computadora.");
         Swal.fire({
-          title: "¡Éxito!",
-          text: "Documento enviado a la PC.",
+          title: "¡Documento Enviado!",
+          text: "¿Deseas subir otro documento con esta misma sesión?",
           icon: "success",
-          confirmButtonText: "Cerrar",
+          showCancelButton: true,
+          confirmButtonText: "Sí, subir otro",
+          cancelButtonText: "No, terminar",
+          confirmButtonColor: "#28a745",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            // Resetear estados visuales pero MANTENER token e isAuthenticated
+            setMode("select");
+            setTempImage(null);
+            setTempPoints(undefined);
+            setMessage("Selecciona el siguiente archivo.");
+          } else {
+            // 🔒 CIERRE DE SESIÓN SEGURO
+            localStorage.removeItem("token");
+            setIsAuthenticated(false);
+            
+            Swal.fire({
+              title: "¡Sesión Finalizada!",
+              text: "Tu sesión móvil ha sido cerrada por seguridad. Ya puedes cerrar esta pestaña.",
+              icon: "info",
+              confirmButtonText: "Entendido",
+              confirmButtonColor: "#6c757d",
+            }).then(() => {
+              // Intentar cerrar la pestaña (opcional, suele ser bloqueado)
+              window.close();
+              // Redirigir al login como respaldo
+              navigate("/signin", { replace: true });
+            });
+          }
         });
-        // Opcional: Cerrar ventana tras éxito
       }
     } catch (err) {
       console.error("❌ Error subiendo archivo:", err);

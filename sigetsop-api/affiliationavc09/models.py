@@ -114,3 +114,8 @@ class AffiliationAVC09(models.Model):
 
     def __str__(self):
         return f"{self.personnel if self.personnel else 'N/A'} - {self.insured_number}"
+
+    def save(self, *args, **kwargs):
+        # 🔹 Forzar valor por defecto para POLICIA BOLIVIANA
+        self.employer_number = "04-911-00052"
+        super().save(*args, **kwargs)
